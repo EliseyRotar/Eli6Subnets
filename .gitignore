@@ -1,0 +1,7 @@
+node_modules/
+dist/
+coverage/
+*.local
+preview.log
+gh-login.log
+.DS_Store
