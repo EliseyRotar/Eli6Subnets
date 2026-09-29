@@ -1,0 +1,169 @@
+/* Structural layout: header, tab bar, tool panel grid, footer toolbar */
+
+/* ── App shell ──────────────────────────────────────────────────── */
+
+#app {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* ── Header ─────────────────────────────────────────────────────── */
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  height: var(--header-height);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-6);
+}
+
+.header__title {
+  font-size: var(--text-xl);
+  font-weight: 600;
+  color: var(--color-text);
+  flex: 1;
+  letter-spacing: -0.02em;
+}
+
+.header__title span {
+  color: var(--color-accent);
+}
+
+.header__controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ── Tab bar ─────────────────────────────────────────────────────── */
+
+.tabbar {
+  display: flex;
+  align-items: stretch;
+  height: var(--tabbar-height);
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--color-border);
+  padding: 0 var(--space-6);
+  gap: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabbar::-webkit-scrollbar {
+  display: none;
+}
+
+.tabbar__tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-4);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+}
+
+.tabbar__tab:hover {
+  color: var(--color-text);
+}
+
+.tabbar__tab[aria-selected="true"] {
+  color: var(--color-accent);
+}
+
+/* Active tab underline indicator */
+.tabbar__tab[aria-selected="true"]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: var(--space-4);
+  right: var(--space-4);
+  height: 2px;
+  background: var(--color-accent);
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+/* ── Main content ────────────────────────────────────────────────── */
+
+.main {
+  flex: 1;
+  max-width: var(--content-max-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--space-6);
+}
+
+/* ── Tool panel (two-column grid) ───────────────────────────────── */
+
+.tool-panel {
+  display: none; /* shown by JS when tab is active */
+}
+
+.tool-panel.is-active {
+  display: grid;
+  grid-template-columns: var(--input-col-width) 1fr;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+.tool-panel__input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  position: sticky;
+  top: calc(var(--header-height) + var(--tabbar-height) + var(--space-6));
+}
+
+.tool-panel__results {
+  min-width: 0; /* prevents overflow from flex/grid child */
+}
+
+/* Stack on narrow viewports */
+@media (max-width: 767px) {
+  .main {
+    padding: var(--space-4);
+  }
+
+  .tool-panel.is-active {
+    grid-template-columns: 1fr;
+  }
+
+  .tool-panel__input {
+    position: static;
+  }
+}
+
+/* ── Footer toolbar ──────────────────────────────────────────────── */
+
+.footer {
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  padding: var(--space-3) var(--space-6);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.footer__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.footer__separator {
+  width: 1px;
+  height: 1.25rem;
+  background: var(--color-border);
+}
