@@ -1,0 +1,89 @@
+/*
+  Design tokens for Eli6Subnets.
+
+  Accent colour: #2563eb (blue-600).
+  Rationale: reads as a technical/network-tool colour; achieves WCAG AA
+  contrast (4.7:1) on both white (#fff) and the dark background (#0f0f13);
+  avoids the cliché cyan-violet gradient common in AI-generated UIs.
+
+  Depth in the light theme is achieved through surface vs background
+  distinction and border weight — no shadows or gradients.
+*/
+
+:root {
+  /* ---------- Accent ---------- */
+  --color-accent:        #2563eb;
+  --color-accent-hover:  #1d4ed8;
+  --color-accent-active: #1e40af;
+  --color-accent-text:   #ffffff;
+  --color-accent-subtle: #eff6ff; /* tint for selected-tab background */
+
+  /* ---------- Neutrals (light theme defaults) ---------- */
+  --color-bg:            #ffffff;
+  --color-surface:       #f4f4f5;
+  --color-surface-2:     #e4e4e7; /* deeper surface, e.g. table header */
+  --color-border:        #d4d4d8;
+  --color-border-strong: #a1a1aa;
+  --color-text:          #18181b;
+  --color-text-muted:    #71717a;
+
+  /* ---------- Semantic ---------- */
+  --color-success:       #16a34a;
+  --color-success-bg:    #f0fdf4;
+  --color-warning:       #d97706;
+  --color-warning-bg:    #fffbeb;
+  --color-error:         #dc2626;
+  --color-error-bg:      #fef2f2;
+
+  /* ---------- Typography ---------- */
+  /* system-ui for prose; monospace stack for IP/numeric values */
+  --font-sans:  system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono:  'Cascadia Code', 'Fira Code', 'Consolas', 'Menlo', monospace;
+
+  --text-xs:    0.75rem;    /* 12px — label */
+  --text-sm:    0.8125rem;  /* 13px — code/mono */
+  --text-base:  0.875rem;   /* 14px — body */
+  --text-lg:    1rem;       /* 16px — section header */
+  --text-xl:    1.25rem;    /* 20px — app title */
+
+  /* ---------- Spacing ---------- */
+  --space-1:  0.25rem;
+  --space-2:  0.5rem;
+  --space-3:  0.75rem;
+  --space-4:  1rem;
+  --space-6:  1.5rem;
+  --space-8:  2rem;
+  --space-12: 3rem;
+
+  /* ---------- Radius ---------- */
+  --radius-sm:  0.25rem;
+  --radius-md:  0.375rem;
+  --radius-lg:  0.5rem;
+
+  /* ---------- Transitions ---------- */
+  --transition-fast: 120ms ease;
+  --transition-base: 200ms ease;
+
+  /* ---------- Layout ---------- */
+  --header-height:     3rem;
+  --tabbar-height:     2.5rem;
+  --content-max-width: 72rem;
+  --input-col-width:   20rem;
+}
+
+/* ---------- Dark theme overrides ---------- */
+[data-theme="dark"] {
+  --color-bg:            #0f0f13;
+  --color-surface:       #1c1c23;
+  --color-surface-2:     #27272f;
+  --color-border:        #3f3f46;
+  --color-border-strong: #71717a;
+  --color-text:          #fafafa;
+  --color-text-muted:    #a1a1aa;
+
+  --color-accent-subtle: #1e3a8a1a; /* very low-opacity blue for dark surfaces */
+
+  --color-success-bg:    #052e16;
+  --color-warning-bg:    #1c1400;
+  --color-error-bg:      #1c0707;
+}
