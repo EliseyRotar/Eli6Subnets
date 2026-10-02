@@ -25,7 +25,7 @@ export function mountEqualSplit(container: HTMLElement): ToolPanel {
   container.insertAdjacentHTML(
     'beforeend',
     `
-    <section class="tool-panel" id="panel-split" role="tabpanel" aria-labelledby="tab-split">
+    <section class="tool-panel" id="view-split" aria-labelledby="nav-split">
       <div class="tool-panel__input">
         <form class="tool-form" id="split-form" novalidate>
           <div class="field">
@@ -49,7 +49,7 @@ export function mountEqualSplit(container: HTMLElement): ToolPanel {
     </section>`,
   )
 
-  const root       = qs(container, '#panel-split')
+  const root       = qs(container, '#view-split')
   const form       = qs(root, '#split-form')
   const cidrInput  = qs<HTMLInputElement>(root, '#split-cidr')
   const cidrError  = qs(root, '#split-cidr-error')
