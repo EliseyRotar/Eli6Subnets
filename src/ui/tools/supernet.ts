@@ -26,7 +26,7 @@ export function mountSupernet(container: HTMLElement): ToolPanel {
   container.insertAdjacentHTML(
     'beforeend',
     `
-    <section class="tool-panel" id="panel-supernet" role="tabpanel" aria-labelledby="tab-supernet">
+    <section class="tool-panel" id="view-supernet" aria-labelledby="nav-supernet">
       <div class="tool-panel__input">
         <form class="tool-form" id="supernet-form" novalidate>
           <fieldset class="tool-fieldset">
@@ -48,7 +48,7 @@ export function mountSupernet(container: HTMLElement): ToolPanel {
     </section>`,
   )
 
-  const root    = qs(container, '#panel-supernet')
+  const root    = qs(container, '#view-supernet')
   const form    = qs(root, '#supernet-form')
   const list    = qs(root, '.js-rows')
   const listErr = qs(root, '.js-list-error')
