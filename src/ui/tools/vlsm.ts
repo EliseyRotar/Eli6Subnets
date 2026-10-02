@@ -31,7 +31,7 @@ export function mountVlsm(container: HTMLElement): ToolPanel {
   container.insertAdjacentHTML(
     'beforeend',
     `
-    <section class="tool-panel" id="panel-vlsm" role="tabpanel" aria-labelledby="tab-vlsm">
+    <section class="tool-panel" id="view-vlsm" aria-labelledby="nav-vlsm">
       <div class="tool-panel__input">
         <form class="tool-form" id="vlsm-form" novalidate>
           <div class="field">
@@ -58,7 +58,7 @@ export function mountVlsm(container: HTMLElement): ToolPanel {
     </section>`,
   )
 
-  const root      = qs(container, '#panel-vlsm')
+  const root      = qs(container, '#view-vlsm')
   const form      = qs(root, '#vlsm-form')
   const baseInput = qs<HTMLInputElement>(root, '#vlsm-base')
   const baseError = qs(root, '#vlsm-base-error')
