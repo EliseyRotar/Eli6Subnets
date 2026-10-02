@@ -63,8 +63,8 @@ describe('accessibility', () => {
     fill('#split-count', '4')
     fill('#vlsm-base', '192.168.1.0/24')
 
-    const names = document.querySelectorAll<HTMLInputElement>('#panel-vlsm .js-row-name')
-    const hosts = document.querySelectorAll<HTMLInputElement>('#panel-vlsm .js-row-hosts')
+    const names = document.querySelectorAll<HTMLInputElement>('#view-vlsm .js-row-name')
+    const hosts = document.querySelectorAll<HTMLInputElement>('#view-vlsm .js-row-hosts')
     if (names[0] && hosts[0]) {
       names[0].value = 'Engineering'
       hosts[0].value = '50'
@@ -74,7 +74,7 @@ describe('accessibility', () => {
       hosts[1].value = '10'
     }
 
-    const rows = document.querySelectorAll<HTMLInputElement>('#panel-supernet .js-row-cidr')
+    const rows = document.querySelectorAll<HTMLInputElement>('#view-supernet .js-row-cidr')
     if (rows[0]) rows[0].value = '192.168.0.0/24'
     if (rows[1]) rows[1].value = '192.168.2.0/24'
 
