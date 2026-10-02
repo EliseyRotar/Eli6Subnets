@@ -64,3 +64,66 @@ export const IconNewSession = IconError
 export const IconCross = svg('<path d="M6 6l12 12"/><path d="M18 6 6 18"/>')
 
 export const IconPlus = svg('<path d="M12 5v14"/><path d="M5 12h14"/>')
+
+/* ── Navigation icons ─────────────────────────────────────────── */
+
+/** Hamburger — open the sidebar drawer on narrow viewports. */
+export const IconMenu = svg('<path d="M4 6h16M4 12h16M4 18h16"/>')
+
+/** Single network block. */
+export const IconSingle = svg(
+  '<rect x="3" y="6" width="18" height="12" rx="2"/>' +
+  '<path d="M3 10h18"/><circle cx="7" cy="14" r="1"/>',
+)
+
+/** Stacked layers — VLSM. */
+export const IconVlsm = svg(
+  '<path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 13 9 5 9-5"/><path d="m3 17 9 5 9-5"/>',
+)
+
+/** Two blocks carved out of one — equal split. */
+export const IconSplit = svg(
+  '<rect x="3" y="5" width="8" height="14" rx="1.5"/>' +
+  '<rect x="13" y="5" width="8" height="14" rx="1.5"/>',
+)
+
+/** Merging arrows — supernetting. */
+export const IconSupernet = svg(
+  '<path d="M3 7h5l3 5"/><path d="M3 17h5l3-5"/><path d="m14 12 4 0 3-3"/><path d="m18 9 3 3-3 3"/>',
+)
+
+/** Pie slice — IPv4 classes. */
+export const IconClasses = svg(
+  '<path d="M12 3a9 9 0 1 0 9 9h-9V3Z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15V3.5Z"/>',
+)
+
+/** Connected nodes — topology. */
+export const IconTopology = svg(
+  '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="6" r="2.5"/>' +
+  '<circle cx="12" cy="18" r="2.5"/><path d="M8.5 6h7M7 8.5l3.5 7M17 8.5 13.5 15.5"/>',
+)
+
+/** Open book — guide. */
+export const IconBook = svg(
+  '<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5v-15Z"/>' +
+  '<path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H20v3H6.5A2.5 2.5 0 0 1 4 20.5Z"/>',
+)
+
+/** Bookmark — saved projects. */
+export const IconBookmark = svg('<path d="M7 4h10a1 1 0 0 1 1 1v15l-6-4-6 4V5a1 1 0 0 1 1-1Z"/>')
+
+/** Left-right arrows between bounds — IP range to CIDR. */
+export const IconRange = svg(
+  '<path d="M4 12h16"/><path d="m7 9-3 3 3 3"/><path d="m17 9 3 3-3 3"/>' +
+  '<path d="M8 5v3M16 5v3M8 16v3M16 16v3"/>',
+)
+
+/** Two overlapping circles — CIDR overlap check. */
+export const IconOverlap = svg(
+  '<circle cx="9" cy="12" r="6"/><circle cx="15" cy="12" r="6"/>',
+)
+
+/** IPv6 glyph. */
+export const IconV6 = svg(
+  '<path d="M4 6v8h5"/><path d="M4 10h4"/><path d="M11 14V6l4 8V6"/><path d="M18 6v8h3"/>',
+)
