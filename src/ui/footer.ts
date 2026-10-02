@@ -2,7 +2,7 @@
  * Footer toolbar: import/export, share and New Session (T-20).
  */
 
-import type { ToolId } from '../state/persist'
+import type { CalculatorId } from '../state/persist'
 import { clearState } from '../state/persist'
 import { getState, resetState } from '../state/store'
 import { t } from '../i18n'
@@ -15,7 +15,7 @@ import type { ToolPanel } from './tools/types'
 
 export function mountFooter(
   container: HTMLElement,
-  panels: Record<ToolId, ToolPanel>,
+  panels: Record<CalculatorId, ToolPanel>,
 ): void {
   container.insertAdjacentHTML('beforeend', '<footer class="footer"></footer>')
   const footer = qs(container, '.footer')
@@ -42,8 +42,9 @@ export function mountFooter(
     const state = getState()
     for (const panel of Object.values(panels)) panel.hydrate(state)
 
-    // Drop a shared link from the address bar so a reload starts fresh.
-    history.replaceState(null, '', location.pathname)
+    // Drop a shared link from the address bar so a reload starts fresh,
+    // but keep the `#/view` fragment: it is part of the navigation state.
+    history.replaceState(null, '', location.pathname + location.hash)
     showToast(t('session.reset'), 'success')
   })
 }
