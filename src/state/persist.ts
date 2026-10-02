@@ -9,7 +9,35 @@
 export const STATE_KEY = 'eli6subnets_state'
 export const SCHEMA_VERSION = 1
 
-export type ToolId = 'single' | 'vlsm' | 'split' | 'supernet'
+/**
+ * Views that are calculators: they hold persisted inputs, render a panel
+ * and support CSV import/export.
+ */
+export type CalculatorId = 'single' | 'vlsm' | 'split' | 'supernet'
+
+/** Callee-facing list used to register panels and sidebar entries. */
+export const CALCULATOR_IDS: CalculatorId[] = ['single', 'vlsm', 'split', 'supernet']
+
+/**
+ * Every navigable view in the sidebar. Widened as the redesign rolls out
+ * (range → CIDR, overlap, IPv6, topology, classes, guide, projects).
+ */
+export type ViewId =
+  | CalculatorId
+  | 'range'
+  | 'overlap'
+  | 'ipv6'
+  | 'topology'
+  | 'classes'
+  | 'guide'
+  | 'projects'
+
+export const VIEW_IDS: ViewId[] = [
+  'single', 'vlsm', 'split', 'supernet',
+  'range', 'overlap', 'ipv6', 'topology',
+  'classes', 'guide', 'projects',
+]
+
 export type ThemeName = 'light' | 'dark'
 
 export interface VlsmRow {
@@ -19,7 +47,7 @@ export interface VlsmRow {
 
 export interface AppState {
   version:    typeof SCHEMA_VERSION
-  activeTool: ToolId
+  activeView: ViewId
   lang:       'it' | 'en'
   theme:      ThemeName
   tools: {
@@ -37,9 +65,9 @@ export interface AppState {
 export function defaultState(): AppState {
   return {
     version:    SCHEMA_VERSION,
-    activeTool: 'single',
+    activeView: 'single',
     lang:       'it',
-    theme:      'light',
+    theme:      'dark',
     tools: {
       single:   { cidr: '' },
       vlsm:     { baseCidr: '', requests: [] },
@@ -79,13 +107,12 @@ function vlsmRows(value: unknown): VlsmRow[] {
   return rows
 }
 
-const TOOLS: ToolId[] = ['single', 'vlsm', 'split', 'supernet']
-
 /**
  * Coerce an arbitrary parsed value into a complete AppState.
  * Returns null when the blob is unusable (wrong type or schema version).
  * Unknown fields are dropped; missing fields fall back to defaults, so a
- * partially written state still loads.
+ * partially written state still loads. Legacy states written before the
+ * sidebar redesign used `activeTool`; the alias keeps them readable.
  */
 export function normalizeState(raw: unknown): AppState | null {
   if (!isRecord(raw)) return null
@@ -94,7 +121,7 @@ export function normalizeState(raw: unknown): AppState | null {
   const base = defaultState()
   const tools = isRecord(raw['tools']) ? raw['tools'] : {}
 
-  const activeTool = str(raw['activeTool'], base.activeTool)
+  const activeView = str(raw['activeView'], str(raw['activeTool'], base.activeView))
   const theme      = str(raw['theme'], base.theme)
   const lang       = str(raw['lang'], base.lang)
   const cisco      = isRecord(raw['cisco']) ? raw['cisco'] : {}
@@ -106,9 +133,9 @@ export function normalizeState(raw: unknown): AppState | null {
 
   return {
     version:    SCHEMA_VERSION,
-    activeTool: (TOOLS as string[]).includes(activeTool)
-      ? (activeTool as ToolId)
-      : base.activeTool,
+    activeView: (VIEW_IDS as string[]).includes(activeView)
+      ? (activeView as ViewId)
+      : base.activeView,
     lang:       lang === 'en' ? 'en' : 'it',
     theme:      theme === 'dark' ? 'dark' : 'light',
     tools: {
