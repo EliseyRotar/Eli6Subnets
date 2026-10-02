@@ -7,7 +7,7 @@
  * import or a New Session).
  */
 
-import { defaultState, saveState, type AppState, type ToolId } from './persist'
+import { defaultState, saveState, type AppState, type CalculatorId } from './persist'
 
 let state: AppState = defaultState()
 const listeners = new Set<(state: AppState) => void>()
@@ -33,7 +33,7 @@ export function patchState(patch: Partial<AppState>): void {
 }
 
 /** Shallow-merge one tool's inputs without touching the other tools. */
-export function patchTool<K extends ToolId>(
+export function patchTool<K extends CalculatorId>(
   tool: K,
   patch: Partial<AppState['tools'][K]>,
 ): void {
