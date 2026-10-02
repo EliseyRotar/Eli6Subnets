@@ -9,19 +9,16 @@
     <!--
       FOUT-prevention: reads saved theme from localStorage and sets data-theme
       on <html> before any stylesheet is parsed, so the first paint uses the
-      correct colour scheme without flash.
+      correct colour scheme without flash. Dark is the default scheme.
     -->
     <script>
       (function () {
         try {
-          var saved = localStorage.getItem('eli6subnets_theme');
-          var preferred = window.matchMedia('(prefers-color-scheme: dark)').matches
-            ? 'dark'
-            : 'light';
-          document.documentElement.dataset.theme = saved || preferred;
+          document.documentElement.dataset.theme =
+            localStorage.getItem('eli6subnets_theme') || 'dark';
         } catch (_) {
           // localStorage may be unavailable in some private-browsing contexts.
-          document.documentElement.dataset.theme = 'light';
+          document.documentElement.dataset.theme = 'dark';
         }
       })();
     </script>
