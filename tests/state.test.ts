@@ -14,7 +14,7 @@ const url     = await import('../src/state/url')
 
 function sampleState(): AppState {
   const state = persist.defaultState()
-  state.activeTool = 'vlsm'
+  state.activeView = 'vlsm'
   state.lang  = 'en'
   state.theme = 'dark'
   state.tools.vlsm.baseCidr = '10.0.0.0/16'
@@ -55,10 +55,11 @@ describe('state persistence', () => {
   })
 
   it('fills in missing fields instead of failing', () => {
+    // The legacy `activeTool` key must still map onto `activeView`.
     store.set(persist.STATE_KEY, JSON.stringify({ version: 1, activeTool: 'split' }))
     const loaded = persist.loadState()
     expect(loaded).not.toBeNull()
-    expect(loaded?.activeTool).toBe('split')
+    expect(loaded?.activeView).toBe('split')
     expect(loaded?.tools.split).toEqual({ cidr: '', count: '' })
     expect(loaded?.tools.vlsm.requests).toEqual([])
   })
@@ -82,7 +83,7 @@ describe('share URL', () => {
     const search   = url.encodeStateToUrl(original)
     const decoded  = url.decodeStateFromUrl(search)
     expect(decoded).not.toBeNull()
-    expect(decoded?.activeTool).toBe(original.activeTool)
+    expect(decoded?.activeView).toBe(original.activeView)
     expect(decoded?.tools).toEqual(original.tools)
     expect(decoded?.cisco).toEqual(original.cisco)
   })
