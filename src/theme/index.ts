@@ -9,7 +9,7 @@ export type Theme = 'light' | 'dark'
 
 /** Read the currently applied theme from the DOM attribute. */
 export function getTheme(): Theme {
-  return (document.documentElement.dataset['theme'] as Theme | undefined) ?? 'light'
+  return (document.documentElement.dataset['theme'] as Theme | undefined) ?? 'dark'
 }
 
 /** Apply a theme: sets data-theme attribute and persists to localStorage. */
@@ -32,15 +32,12 @@ export function toggleTheme(): Theme {
 /**
  * Called during app bootstrap after the inline script has already
  * set the initial theme. This is a no-op if data-theme is already set;
- * it only falls back to prefers-color-scheme if the attribute is missing
+ * it only falls back to the dark default if the attribute is missing
  * (e.g. JS was disabled for the inline script somehow).
  */
 export function initTheme(): Theme {
   const current = document.documentElement.dataset['theme'] as Theme | undefined
   if (current === 'light' || current === 'dark') return current
-  const preferred: Theme = window.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : 'light'
-  applyTheme(preferred)
-  return preferred
+  applyTheme('dark')
+  return 'dark'
 }
