@@ -16,7 +16,7 @@ export function mountSingleSubnet(container: HTMLElement): ToolPanel {
   container.insertAdjacentHTML(
     'beforeend',
     `
-    <section class="tool-panel" id="panel-single" role="tabpanel" aria-labelledby="tab-single">
+    <section class="tool-panel" id="view-single" aria-labelledby="nav-single">
       <div class="tool-panel__input">
         <form class="tool-form" id="single-form" novalidate>
           <div class="field">
@@ -34,7 +34,7 @@ export function mountSingleSubnet(container: HTMLElement): ToolPanel {
     </section>`,
   )
 
-  const root    = qs(container, '#panel-single')
+  const root    = qs(container, '#view-single')
   const form    = qs(root, '#single-form')
   const input   = qs<HTMLInputElement>(root, '#single-cidr')
   const error   = qs(root, '#single-error')
