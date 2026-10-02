@@ -15,7 +15,7 @@ beforeAll(async () => {
   const { encodeStateToUrl } = await import('../src/state/url')
 
   const shared = defaultState()
-  shared.activeTool = 'split'
+  shared.activeView = 'split'
   shared.tools.single.cidr = '172.16.0.0/16'
   shared.tools.split.cidr = '10.10.0.0/20'
   shared.tools.split.count = '8'
@@ -30,8 +30,8 @@ const value = (selector: string): string =>
 
 describe('shared URL boot', () => {
   it('activates the tool carried by the link', () => {
-    expect(document.querySelector('#panel-split')?.classList.contains('is-active')).toBe(true)
-    expect(document.querySelector('#tab-split')?.getAttribute('aria-selected')).toBe('true')
+    expect(document.querySelector('#view-split')?.classList.contains('is-active')).toBe(true)
+    expect(document.querySelector('#nav-split')?.getAttribute('aria-current')).toBe('page')
   })
 
   it('hydrates every tool input from the payload', () => {
@@ -42,13 +42,13 @@ describe('shared URL boot', () => {
   })
 
   it('calculates immediately after hydration', () => {
-    const results = document.querySelector('#panel-split .tool-panel__results')
+    const results = document.querySelector('#view-split .tool-panel__results')
     expect(results?.textContent).toContain('10.10.0.0/23')
     expect(results?.querySelectorAll('tbody tr')).toHaveLength(8)
   })
 
   it('keeps the language personal instead of importing it', () => {
-    expect(document.querySelector('#tab-single')?.textContent).toBe('Sottorete singola')
+    expect(document.querySelector('#nav-single')?.textContent?.trim()).toBe('Sottorete singola')
     expect(document.documentElement.lang).toBe('it')
   })
 
