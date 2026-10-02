@@ -32,7 +32,7 @@ function fromBase64Url(encoded: string): string {
 export function shareableSubset(state: AppState): Partial<AppState> {
   return {
     version:    state.version,
-    activeTool: state.activeTool,
+    activeView: state.activeView,
     tools:      state.tools,
     cisco:      state.cisco,
   }
