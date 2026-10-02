@@ -5,7 +5,7 @@
  * tool's inputs, which makes an export → import round trip lossless.
  */
 
-import { normalizeState, type AppState, type ToolId } from '../state/persist'
+import { normalizeState, type AppState, type CalculatorId } from '../state/persist'
 import { getState, setState } from '../state/store'
 import { t } from '../i18n'
 import { qs } from './dom'
@@ -91,7 +91,7 @@ export function parseCsv(text: string): string[][] {
 
 export function mountImportExport(
   container: HTMLElement,
-  panels: Record<ToolId, ToolPanel>,
+  panels: Record<CalculatorId, ToolPanel>,
 ): ImportExportHandle {
   container.insertAdjacentHTML(
     'beforeend',
@@ -147,10 +147,12 @@ export function mountImportExport(
     errorText.textContent = ''
   }
 
-  const activePanel = (): ToolPanel => {
-    const panel = panels[getState().activeTool]
-    if (!panel) throw new Error('No panel registered for the active tool')
-    return panel
+  /**
+   * The active view's panel when that view is a calculator; reference
+   * views (guide, classes, …) carry no CSV schema and return null.
+   */
+  const activePanel = (): ToolPanel | null => {
+    return panels[getState().activeView as CalculatorId] ?? null
   }
 
   const applyState = (state: AppState): void => {
@@ -168,8 +170,13 @@ export function mountImportExport(
   })
 
   qs(container, '#export-csv').addEventListener('click', () => {
-    const tool = getState().activeTool
-    download(`eli6subnets-${tool}.csv`, toCsv(activePanel().exportCsv()), 'text/csv')
+    const panel = activePanel()
+    if (!panel) {
+      showError(t('export.noCsvView'))
+      return
+    }
+    const view = getState().activeView
+    download(`eli6subnets-${view}.csv`, toCsv(panel.exportCsv()), 'text/csv')
     showToast(t('export.done', 'CSV'), 'success')
   })
 
@@ -221,6 +228,10 @@ export function mountImportExport(
       }
 
       const panel = activePanel()
+      if (!panel) {
+        showError(t('export.noCsvView'))
+        return
+      }
       const expected = panel.csvHeader.map(column => column.toLowerCase())
       const actual = header.map(column => column.trim().toLowerCase())
 
