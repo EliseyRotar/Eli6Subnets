@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VLSM Slice Planner</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --panel: #121b2e;
+    --panel-2: #17223a;
+    --panel-line: #24314a;
+    --ring-bg: #1c2740;
+    --text: #dce4f0;
+    --text-dim: #7f8ea8;
+    --accent: #37c6a0;
+    --accent-dim: #1f7d63;
+    --warn: #e0a542;
+    --danger: #d9636b;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+
+    /* IPv4 class colours (classes view + parent-network tag) */
+    --A: #3E8F63; --A-dim: #274734;
+    --B: #3172B0; --B-dim: #243A55;
+    --C: #B98A1E; --C-dim: #4A3B18;
+    --D: #7A55A8; --D-dim: #3A2E52;
+    --E: #6C7488; --E-dim: #333B4D;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f4f6fa;
+      --panel: #ffffff;
+      --panel-2: #eef2f7;
+      --panel-line: #dde3ee;
+      --ring-bg: #e3e8f0;
+      --text: #17233c;
+      --text-dim: #5c6b85;
+      --accent: #0f9d78;
+      --accent-dim: #cdeee2;
+      --A-dim: #A9D2BB; --B-dim: #A7C4E4; --C-dim: #E4CC96; --D-dim: #CBB9E3; --E-dim: #C3C8D3;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #f4f6fa;
+    --panel: #ffffff;
+    --panel-2: #eef2f7;
+    --panel-line: #dde3ee;
+    --ring-bg: #e3e8f0;
+    --text: #17233c;
+    --text-dim: #5c6b85;
+    --accent: #0f9d78;
+    --accent-dim: #cdeee2;
+    --A-dim: #A9D2BB; --B-dim: #A7C4E4; --C-dim: #E4CC96; --D-dim: #CBB9E3; --E-dim: #C3C8D3;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  #app { max-width: 1180px; margin: 0 auto; padding: 40px 24px 80px; }
+
+  header { margin-bottom: 24px; }
+  header .eyebrow-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  h1 {
+    font-size: 28px;
+    font-weight: 650;
+    letter-spacing: -0.01em;
+    margin: 0 0 6px;
+  }
+  header p {
+    color: var(--text-dim);
+    font-size: 14.5px;
+    line-height: 1.55;
+    max-width: 58ch;
+    margin: 0;
+  }
+
+  /* View tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--panel-line);
+    margin-bottom: 24px;
+  }
+  .tabs a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 14px;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tabs a:hover { color: var(--text); }
+  .tabs a.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .view[hidden] { display: none; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--panel-line);
+    border-radius: 10px;
+    padding: 22px;
+  }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 90px; gap: 10px; }
+
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    padding: 9px 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+  }
+  input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input.invalid { border-color: var(--danger); }
+
+  .parent-summary {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    min-height: 16px;
+  }
+  .parent-summary.err { color: var(--danger); }
+  .parent-class {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: var(--text-dim);
+  }
+  .parent-class:empty { display: none; }
+  .class-tag {
+    font-family: var(--mono);
+    font-weight: 600;
+    font-size: 11.5px;
+    color: #fff;
+    background: var(--c);
+    border-radius: 4px;
+    padding: 2px 7px;
+  }
+  .parent-class a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+    margin-left: auto;
+  }
+  .parent-class a:hover { text-decoration: underline; }
+
+  h2.section-title {
+    font-size: 13px;
+    text-transform: none;
+    color: var(--text-dim);
+    margin: 26px 0 12px;
+    font-weight: 600;
+  }
+  h2.section-title:first-of-type { margin-top: 4px; }
+
+  #reqList { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .req-row {
+    display: grid;
+    grid-template-columns: 1fr 72px 64px 24px;
+    gap: 6px;
+    align-items: center;
+  }
+  .req-row .swatch {
+    width: 10px; height: 10px; border-radius: 2px;
+    display: inline-block; margin-right: 7px; flex: none;
+  }
+  .req-row .name-wrap { display: flex; align-items: center; overflow: hidden; }
+  .req-row .name-text {
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px;
+  }
+  .mode-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: rgba(55, 198, 160, 0.14);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 6px;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 12px;
+    padding: 7px 6px;
+    cursor: pointer;
+    text-align: center;
+    white-space: nowrap;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  }
+  .mode-toggle .swap-icon { font-size: 11px; line-height: 1; }
+  .mode-toggle:hover { background: var(--accent); color: #06251d; box-shadow: 0 2px 5px rgba(55, 198, 160, 0.35); }
+  .mode-toggle:active { transform: translateY(1px); box-shadow: none; }
+  .value-wrap {
+    display: flex;
+    align-items: stretch;
+    background: var(--bg);
+    border: 1px solid var(--panel-line);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .value-wrap:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .value-wrap.invalid { border-color: var(--danger); }
+  .value-wrap .value-prefix {
+    display: flex; align-items: center;
+    padding: 0 0 0 8px;
+    color: var(--text-dim);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .value-wrap input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    padding: 6px 8px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    text-align: right;
+  }
+  .value-wrap input:focus { outline: none; }
+  .req-row button.del {
+    background: none; border: none; color: var(--text-dim);
+    cursor: pointer; font-size: 16px; line-height: 1; padding: 4px;
+    border-radius: 4px;
+  }
+  .req-row button.del:hover { color: var(--danger); background: rgba(217,99,107,0.1); }
+
+  .add-row { display: grid; grid-template-columns: 1fr 90px 64px; gap: 6px; margin-top: 10px; }
+  .mode-hint {
+    font-size: 11.5px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    line-height: 1.4;
+  }
+  button.primary {
+    background: var(--accent);
+    color: #06251d;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 16px;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 4px;
+  }
+  button.primary:hover { filter: brightness(1.08); }
+  button.primary:active { transform: translateY(1px); }
+  button.ghost {
+    background: transparent;
+    border: 1px solid var(--panel-line);
+    color: var(--text-dim);
+    border-radius: 6px;
+    font-size: 13px;
+    padding: 8px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  button.ghost:hover { color: var(--text); border-color: var(--text-dim); }
+
+  .empty-hint {
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 10px 2px;
+    border: 1px dashed var(--panel-line);
+    border-radius: 6px;
+    text-align: center;
+  }
+
+  /* Results side */
+  .results-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 12px; margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .stat { text-align: right; }
+  .stat .num { font-family: var(--mono); font-size: 22px; font-weight: 600; }
+  .stat .lbl { font-size: 11.5px; color: var(--text-dim); }
+  .stat-group { display: flex; gap: 22px; }
+
+  .chart-wrap {
+    display: flex; gap: 28px; align-items: center; flex-wrap: wrap;
+    justify-content: center;
+    padding: 8px 0 20px;
+  }
+  svg#pie { flex: none; }
+  .slice { cursor: pointer; transition: opacity 0.15s ease; }
+  .slice.dim { opacity: 0.35; }
+  .slice-label { font-family: var(--mono); font-size: 10.5px; fill: var(--text); pointer-events: none; }
+
+  .legend { display: flex; flex-direction: column; gap: 7px; min-width: 200px; }
+  .legend-item {
+    display: flex; align-items: center; gap: 9px; font-size: 13px;
+    padding: 4px 6px; border-radius: 5px; cursor: pointer;
+  }
+  .legend-item:hover { background: rgba(255,255,255,0.04); }
+  .legend-item .sw { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .legend-item .lname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .legend-item .lpct { font-family: var(--mono); color: var(--text-dim); font-size: 12px; }
+
+  #resultTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 4px;
+  }
+  #resultTable thead th {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-dim);
+    font-size: 11.5px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--panel-line);
+  }
+  #resultTable tbody td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--panel-line);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    white-space: nowrap;
+  }
+  #resultTable tbody td.name-cell { font-family: var(--sans); white-space: normal; }
+  #resultTable tbody tr:last-child td { border-bottom: none; }
+  #resultTable tbody tr:hover td { background: rgba(255,255,255,0.025); }
+  #resultTable .dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; margin-right: 8px; vertical-align: middle; }
+  .table-wrap { overflow-x: auto; }
+
+  .error-box {
+    color: var(--danger);
+    font-size: 13.5px;
+    background: rgba(217,99,107,0.08);
+    border: 1px solid rgba(217,99,107,0.35);
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin-top: 6px;
+  }
+
+  /* ---------- Classes view ---------- */
+  #classesView .intro { margin-bottom: 20px; }
+  #classesView .intro h2 { font-size: 20px; font-weight: 650; margin: 0 0 6px; }
+  #classesView .intro p {
+    margin: 0; color: var(--text-dim); font-size: 14.5px; line-height: 1.55; max-width: 62ch;
+  }
+  #classesView .board {
+    display: grid;
+    grid-template-columns: minmax(280px, 420px) 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 760px) {
+    #classesView .board { grid-template-columns: 1fr; }
+  }
+  #ringSvg { display: block; width: 100%; height: auto; overflow: visible; }
+  #classesView .wedge {
+    cursor: pointer;
+    transition: transform .18s ease, opacity .3s ease;
+    transform-origin: 250px 250px;
+  }
+  #classesView .wedge:hover { transform: scale(1.025); }
+  #classesView .wedge.locked { cursor: default; }
+  #classesView .wedge.locked:hover { transform: none; }
+  #classesView .centerLabel { font-family: var(--mono); text-anchor: middle; fill: var(--text); }
+  #classesView .centerLabel.big { font-size: 28px; font-weight: 600; }
+  #classesView .centerLabel.small { font-size: 12px; fill: var(--text-dim); }
+
+  #classesView .backBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--panel-2);
+    border: 1px solid var(--panel-line);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 12px 7px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    margin-bottom: 14px;
+  }
+  #classesView .backBtn:hover { background: var(--ring-bg); }
+  #classesView .backBtn svg { width: 14px; height: 14px; display: inline; }
+
+  #classesView .note {
+    font-size: 12px; color: var(--text-dim); text-align: center; margin-top: 10px; line-height: 1.5;
+  }
+
+  #classesView .classLegend { display: flex; flex-direction: column; gap: 8px; }
+  #classesView .legendRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--panel-line);
+    cursor: pointer;
+    background: var(--panel);
+  }
+  #classesView .legendRow:hover { border-color: var(--rowColor, var(--text-dim)); }
+  #classesView .legendRow .swatch {
+    width: 14px; height: 14px; border-radius: 4px; flex: none; background: var(--rowColor);
+  }
+  #classesView .legendText { flex: 1; min-width: 0; }
+  #classesView .legendText .name { font-weight: 600; font-size: 14px; }
+  #classesView .legendText .meta { font-size: 12px; color: var(--text-dim); font-family: var(--mono); }
+  #classesView .legendPct { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text-dim); }
+  #classesView .chev { color: var(--text-dim); flex: none; }
+
+  #classesView .detailPanel h2 { margin: 0 0 4px; font-size: 20px; }
+  #classesView .detailPanel .sub { color: var(--text-dim); font-size: 13px; margin: 0 0 16px; line-height: 1.5; }
+  #classesView .rangeTable { width: 100%; border-collapse: collapse; font-size: 13px; }
+  #classesView .rangeTable tr { border-top: 1px solid var(--panel-line); }
+  #classesView .rangeTable tr:first-child { border-top: none; }
+  #classesView .rangeTable td { padding: 10px 4px; vertical-align: top; }
+  #classesView .rangeTable td.tag { width: 14px; }
+  #classesView .rangeTable .cdot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  #classesView .rangeTable .label { font-weight: 600; font-size: 13.5px; }
+  #classesView .rangeTable .val { font-family: var(--mono); font-size: 12.5px; color: var(--text-dim); }
+  #classesView .rangeTable .pct { text-align: right; font-family: var(--mono); font-weight: 600; white-space: nowrap; }
+
+  #classesView .useLine {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--panel-line);
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.55;
+  }
+  #classesView .useLine b { color: var(--text); font-weight: 600; }
+
+  #classesView .planBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    background: var(--accent);
+    color: #06251d;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 14px;
+    padding: 10px 16px;
+    text-decoration: none;
+  }
+  #classesView .planBtn:hover { filter: brightness(1.08); }
+  #classesView .planBtn code { font-family: var(--mono); font-size: 13px; }
+
+  footer {
+    margin-top: 30px;
+    color: var(--text-dim);
+    font-size: 12px;
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="eyebrow-row">
+      <h1>VLSM Slice Planner</h1>
+    </div>
+    <p>Carve a parent network into right-sized subnets and see exactly how much of the address space each one eats — as a pie, not just a table.</p>
+  </header>
+
+  <nav class="tabs">
+    <a href="#" data-view="planner">Planner</a>
+    <a href="#classes" data-view="classes">IPv4 classes</a>
+  </nav>
+
+  <!-- ================= PLANNER VIEW ================= -->
+  <section class="view" id="plannerView">
+  <div class="grid">
+    <!-- LEFT: INPUTS -->
+    <div class="panel">
+      <h2 class="section-title">Parent network</h2>
+      <div class="field">
+        <label for="parentInput">Network / prefix</label>
+        <input type="text" id="parentInput" value="192.168.0.0/24" spellcheck="false">
+        <div class="parent-summary" id="parentSummary"></div>
+        <div class="parent-class" id="parentClass"></div>
+      </div>
+
+      <h2 class="section-title">Subnets needed</h2>
+      <div id="reqList"></div>
+      <div id="emptyHint" class="empty-hint">Add subnets below — each gets its own slice.</div>
+
+      <div class="add-row">
+        <input type="text" id="newName" placeholder="Subnet name (e.g. Servers)">
+        <div class="value-wrap" id="newValueWrap">
+          <input type="number" id="newValue" placeholder="Hosts" min="1">
+        </div>
+        <button class="mode-toggle" id="newModeToggle" type="button" aria-label="Toggle input mode"><span class="swap-icon">⇄</span>hosts</button>
+      </div>
+      <button class="primary" id="addBtn" type="button">Add subnet</button>
+      <div class="mode-hint">Specify by number of hosts, or tap "hosts" to switch to mask (e.g. /26).</div>
+    </div>
+
+    <!-- RIGHT: RESULTS -->
+    <div class="panel">
+      <div class="results-head">
+        <div>
+          <h2 class="section-title" style="margin:0 0 2px;">Allocation</h2>
+        </div>
+        <div class="stat-group" id="statGroup"></div>
+      </div>
+
+      <div id="errorArea"></div>
+      <div id="chartArea" class="chart-wrap"></div>
+      <div class="table-wrap">
+        <table id="resultTable" style="display:none;">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Name</th>
+              <th>Requested</th>
+              <th>Network</th>
+              <th>Prefix</th>
+              <th>Usable range</th>
+              <th>Broadcast</th>
+              <th>Usable hosts</th>
+            </tr>
+          </thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  </section>
+
+  <!-- ================= CLASSES VIEW ================= -->
+  <section class="view" id="classesView" hidden>
+    <div class="intro">
+      <h2>IPv4 address classes</h2>
+      <p>The ring shows how the IPv4 space (2³² addresses) splits across classes A–E. Click class A, B, or C to see how much of it is set aside for private networks, then send that private block to the planner to split it into subnets.</p>
+    </div>
+    <div class="board">
+      <div class="panel">
+        <svg viewBox="0 0 500 500" id="ringSvg" aria-hidden="false"></svg>
+        <div class="note" id="chartNote"></div>
+      </div>
+      <div id="rightCol"></div>
+    </div>
+  </section>
+
+  <footer>All calculations run locally in your browser.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const PALETTE = [
+    "#37c6a0", "#4f8ff0", "#e0a542", "#c774e8",
+    "#e0637a", "#5fd0e0", "#9bd35c", "#f0885f",
+    "#7b8ff0", "#e0c93f", "#5fe0b3", "#e07fc0"
+  ];
+  const FREE_COLOR = "#2a3752";
+  const FREE_COLOR_LIGHT = "#dbe2ee";
+
+  let requirements = []; // {id, name, mode: 'hosts'|'mask', value}
+  let reqCounter = 0;
+  let newMode = "hosts";
+
+  const parentInput = document.getElementById("parentInput");
+  const parentSummary = document.getElementById("parentSummary");
+  const parentClass = document.getElementById("parentClass");
+  const reqListEl = document.getElementById("reqList");
+  const emptyHint = document.getElementById("emptyHint");
+  const newName = document.getElementById("newName");
+  const newModeToggle = document.getElementById("newModeToggle");
+  const newValueWrap = document.getElementById("newValueWrap");
+  const addBtn = document.getElementById("addBtn");
+  const chartArea = document.getElementById("chartArea");
+  const errorArea = document.getElementById("errorArea");
+  const statGroup = document.getElementById("statGroup");
+  const resultTable = document.getElementById("resultTable");
+  const resultBody = document.getElementById("resultBody");
+
+  // ---------- IPv4 helpers ----------
+  function ipToInt(ip) {
+    const parts = ip.trim().split(".");
+    if (parts.length !== 4) return null;
+    let n = 0;
+    for (const p of parts) {
+      if (!/^\d{1,3}$/.test(p)) return null;
+      const v = parseInt(p, 10);
+      if (v < 0 || v > 255) return null;
+      n = (n << 8) | v;
+    }
+    return n >>> 0;
+  }
+  function intToIp(n) {
+    return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
+  }
+  function parseCidr(str) {
+    const m = str.trim().match(/^(\d{1,3}(?:\.\d{1,3}){3})\/(\d{1,2})$/);
+    if (!m) return { error: "Enter a network like 192.168.0.0/24." };
+    const base = ipToInt(m[1]);
+    const prefix = parseInt(m[2], 10);
+    if (base === null) return { error: "That IPv4 address isn't valid." };
+    if (prefix < 0 || prefix > 32) return { error: "Prefix must be between /0 and /32." };
+    const size = prefix === 0 ? 4294967296 : Math.pow(2, 32 - prefix);
+    const network = prefix === 32 ? base : (base & (0xFFFFFFFF << (32 - prefix))) >>> 0;
+    return { base, prefix, size, network };
+  }
+  function prefixForHosts(hosts) {
+    // smallest block covering hosts usable addresses (network + broadcast reserved when block > 1)
+    let needed = hosts <= 1 ? 1 : hosts + 2;
+    let prefix = 32;
+    let size = 1;
+    while (size < needed) { prefix -= 1; size *= 2; }
+    if (prefix < 0) return null;
+    return { prefix, size };
+  }
+  function blockFromPrefix(prefix) {
+    if (prefix === null || prefix === undefined || isNaN(prefix) || prefix < 0 || prefix > 32) return null;
+    const size = prefix === 0 ? 4294967296 : Math.pow(2, 32 - prefix);
+    return { prefix, size };
+  }
+  // resolves a requirement (hosts-mode or mask-mode) to its allocated block
+  function blockForRequirement(r) {
+    return r.mode === "mask" ? blockFromPrefix(r.value) : prefixForHosts(r.value);
+  }
+  // rough conversion used only when the user flips a row's mode, to keep the field populated sensibly
+  function usableHostsForSize(size) { return size > 2 ? size - 2 : size; }
+
+  // ---------- classful context for the parent network ----------
+  const PRIVATE_BLOCKS = [["10.0.0.0", 8], ["172.16.0.0", 12], ["192.168.0.0", 16]]
+    .map(([ip, p]) => ({ base: ipToInt(ip), size: Math.pow(2, 32 - p) }));
+  const LOOPBACK = { base: ipToInt("127.0.0.0"), size: Math.pow(2, 24) };
+
+  function classOf(n) {
+    const o = n >>> 24;
+    return o < 128 ? "A" : o < 192 ? "B" : o < 224 ? "C" : o < 240 ? "D" : "E";
+  }
+  function describeParent(p) {
+    const first = classOf(p.network);
+    const last = classOf(p.network + p.size - 1);
+    const inside = b => p.network >= b.base && p.network + p.size <= b.base + b.size;
+    const overlaps = b => p.network < b.base + b.size && p.network + p.size > b.base;
+    let scope;
+    if (first === "D") scope = "multicast — not assignable to hosts";
+    else if (first === "E") scope = "reserved — not assignable to hosts";
+    else if (inside(LOOPBACK)) scope = "loopback";
+    else if (PRIVATE_BLOCKS.some(inside)) scope = "private (RFC 1918)";
+    else if (PRIVATE_BLOCKS.some(overlaps)) scope = "mixes public and private";
+    else scope = "public";
+    return { first, last, scope };
+  }
+  function renderParentClass(parsed) {
+    if (parsed.error) { parentClass.innerHTML = ""; return; }
+    const d = describeParent(parsed);
+    if (d.first !== d.last) {
+      parentClass.innerHTML = `<span>Spans classes ${d.first}–${d.last}</span><a href="#classes">IPv4 classes →</a>`;
+      return;
+    }
+    parentClass.innerHTML = `
+      <span class="class-tag" style="--c:var(--${d.first})">Class ${d.first}</span>
+      <span>${d.scope}</span>
+      <a href="#classes/${d.first}">About class ${d.first} →</a>
+    `;
+  }
+
+  function render() {
+    // parent
+    const parsed = parseCidr(parentInput.value);
+    if (parsed.error) {
+      parentSummary.textContent = parsed.error;
+      parentSummary.classList.add("err");
+      parentInput.classList.add("invalid");
+    } else {
+      parentSummary.textContent =
+        `${intToIp(parsed.network)} – ${intToIp(parsed.network + parsed.size - 1)}  ·  ${parsed.size.toLocaleString()} addresses`;
+      parentSummary.classList.remove("err");
+      parentInput.classList.remove("invalid");
+    }
+    renderParentClass(parsed);
+
+    renderReqList();
+    computeAndRenderAllocation(parsed);
+  }
+
+  function renderReqList() {
+    reqListEl.innerHTML = "";
+    if (requirements.length === 0) {
+      emptyHint.style.display = "block";
+    } else {
+      emptyHint.style.display = "none";
+      requirements.forEach((r, i) => {
+        const row = document.createElement("div");
+        row.className = "req-row";
+        const color = PALETTE[i % PALETTE.length];
+        const isMask = r.mode === "mask";
+
+        row.innerHTML = `
+          <div class="name-wrap">
+            <span class="swatch" style="background:${color}"></span>
+            <span class="name-text">${escapeHtml(r.name)}</span>
+          </div>
+          <button class="mode-toggle" type="button" aria-label="Switch ${escapeHtml(r.name)} to ${isMask ? "hosts" : "mask"} mode"><span class="swap-icon">⇄</span>${isMask ? "/mask" : "hosts"}</button>
+          <div class="value-wrap">
+            ${isMask ? '<span class="value-prefix">/</span>' : ""}
+            <input type="number" class="value-input" min="${isMask ? 0 : 1}" max="${isMask ? 32 : ""}" value="${r.value}" aria-label="${isMask ? "Mask" : "Hosts"} for ${escapeHtml(r.name)}">
+          </div>
+          <button class="del" type="button" aria-label="Remove ${escapeHtml(r.name)}">×</button>
+        `;
+
+        row.querySelector(".del").addEventListener("click", () => {
+          requirements = requirements.filter(x => x.id !== r.id);
+          render();
+        });
+
+        const valueWrap = row.querySelector(".value-wrap");
+        const valueInput = row.querySelector(".value-input");
+
+        function commitValue() {
+          const v = parseInt(valueInput.value, 10);
+          const ok = isMask ? (Number.isInteger(v) && v >= 0 && v <= 32) : (v && v >= 1);
+          if (ok) {
+            valueWrap.classList.remove("invalid");
+            r.value = v;
+            computeAndRenderAllocation(parseCidr(parentInput.value));
+          } else {
+            valueWrap.classList.add("invalid");
+          }
+        }
+        valueInput.addEventListener("input", commitValue);
+        valueInput.addEventListener("blur", () => {
+          const v = parseInt(valueInput.value, 10);
+          const ok = isMask ? (Number.isInteger(v) && v >= 0 && v <= 32) : (v && v >= 1);
+          if (!ok) {
+            valueInput.value = r.value;
+            valueWrap.classList.remove("invalid");
+            computeAndRenderAllocation(parseCidr(parentInput.value));
+          }
+        });
+
+        row.querySelector(".mode-toggle").addEventListener("click", () => {
+          const block = blockForRequirement(r);
+          if (r.mode === "mask") {
+            r.mode = "hosts";
+            r.value = block ? usableHostsForSize(block.size) : 1;
+          } else {
+            r.mode = "mask";
+            r.value = block ? block.prefix : 30;
+          }
+          renderReqList();
+          computeAndRenderAllocation(parseCidr(parentInput.value));
+        });
+
+        reqListEl.appendChild(row);
+      });
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+  }
+
+  function computeAndRenderAllocation(parsed) {
+    errorArea.innerHTML = "";
+    statGroup.innerHTML = "";
+    chartArea.innerHTML = "";
+    resultTable.style.display = "none";
+    resultBody.innerHTML = "";
+
+    if (parsed.error) return;
+    if (requirements.length === 0) {
+      chartArea.innerHTML = `<div class="empty-hint" style="width:100%;">Add at least one subnet to see the allocation.</div>`;
+      return;
+    }
+
+    // sort by resulting block size descending (largest-first VLSM allocation)
+    const order = requirements
+      .map((r, idx) => ({ ...r, colorIdx: idx, block: blockForRequirement(r) }))
+      .sort((a, b) => (b.block ? b.block.size : 0) - (a.block ? a.block.size : 0));
+
+    let cursor = parsed.network;
+    const parentEnd = parsed.network + parsed.size;
+    const allocations = [];
+    let failed = null;
+
+    for (const r of order) {
+      const pf = r.block;
+      if (!pf) { failed = `"${r.name}" has an invalid ${r.mode === "mask" ? "mask" : "host count"}.`; break; }
+      // align cursor to block boundary
+      const aligned = Math.ceil(cursor / pf.size) * pf.size;
+      if (aligned + pf.size > parentEnd) {
+        failed = `Ran out of space allocating "${r.name}" (needs /${pf.prefix}, ${pf.size.toLocaleString()} addresses).`;
+        break;
+      }
+      allocations.push({
+        ...r,
+        prefix: pf.prefix,
+        size: pf.size,
+        network: aligned,
+        broadcast: aligned + pf.size - 1,
+        firstUsable: pf.size > 2 ? aligned + 1 : aligned,
+        lastUsable: pf.size > 2 ? aligned + pf.size - 2 : aligned + pf.size - 1,
+        usableHosts: pf.size > 2 ? pf.size - 2 : pf.size
+      });
+      cursor = aligned + pf.size;
+    }
+
+    if (failed) {
+      errorArea.innerHTML = `<div class="error-box">${escapeHtml(failed)} Try a larger parent network or fewer hosts.</div>`;
+    }
+
+    if (allocations.length === 0) return;
+
+    const usedTotal = allocations.reduce((s, a) => s + a.size, 0);
+    const freeTotal = parsed.size - usedTotal;
+    const efficiency = ((usedTotal / parsed.size) * 100);
+
+    // stats
+    statGroup.innerHTML = `
+      <div class="stat"><div class="num">${allocations.length}</div><div class="lbl">subnets placed</div></div>
+      <div class="stat"><div class="num">${efficiency.toFixed(1)}%</div><div class="lbl">space used</div></div>
+      <div class="stat"><div class="num">${freeTotal.toLocaleString()}</div><div class="lbl">addresses free</div></div>
+    `;
+
+    drawPie(allocations, freeTotal, parsed.size);
+    fillTable(allocations);
+  }
+
+  function drawPie(allocations, freeTotal, totalSize) {
+    const size = 260, r = 108, cx = size / 2, cy = size / 2;
+    const isLight = document.documentElement.getAttribute("data-theme") === "light" ||
+      (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches &&
+       document.documentElement.getAttribute("data-theme") !== "dark");
+    const freeColor = isLight ? FREE_COLOR_LIGHT : FREE_COLOR;
+
+    const slices = allocations.map(a => ({
+      label: a.name, value: a.size, color: PALETTE[a.colorIdx % PALETTE.length], isFree: false
+    }));
+    if (freeTotal > 0) {
+      slices.push({ label: "Unallocated", value: freeTotal, color: freeColor, isFree: true });
+    }
+
+    let angle = -Math.PI / 2;
+    const paths = [];
+    slices.forEach((s, i) => {
+      const frac = s.value / totalSize;
+      const sweep = frac * Math.PI * 2;
+      const a0 = angle, a1 = angle + sweep;
+      const x0 = cx + r * Math.cos(a0), y0 = cy + r * Math.sin(a0);
+      const x1 = cx + r * Math.cos(a1), y1 = cy + r * Math.sin(a1);
+      const large = sweep > Math.PI ? 1 : 0;
+      const d = frac >= 0.9999
+        ? `M ${cx} ${cy - r} A ${r} ${r} 0 1 1 ${cx - 0.01} ${cy - r} Z`
+        : `M ${cx} ${cy} L ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1} Z`;
+      paths.push({ d, color: s.color, label: s.label, pct: frac * 100, isFree: s.isFree, idx: i });
+      angle = a1;
+    });
+
+    const svgNS = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(svgNS, "svg");
+    svg.setAttribute("id", "pie");
+    svg.setAttribute("width", size);
+    svg.setAttribute("height", size);
+    svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+
+    paths.forEach(p => {
+      const path = document.createElementNS(svgNS, "path");
+      path.setAttribute("d", p.d);
+      path.setAttribute("fill", p.color);
+      path.setAttribute("class", "slice");
+      path.setAttribute("data-idx", p.idx);
+      path.setAttribute("stroke", "var(--panel)");
+      path.setAttribute("stroke-width", "1.5");
+      const title = document.createElementNS(svgNS, "title");
+      title.textContent = `${p.label} — ${p.pct.toFixed(1)}%`;
+      path.appendChild(title);
+      svg.appendChild(path);
+    });
+
+    const legend = document.createElement("div");
+    legend.className = "legend";
+    paths.forEach(p => {
+      const item = document.createElement("div");
+      item.className = "legend-item";
+      item.dataset.idx = p.idx;
+      item.innerHTML = `
+        <span class="sw" style="background:${p.color}"></span>
+        <span class="lname">${escapeHtml(p.label)}${p.isFree ? "" : ""}</span>
+        <span class="lpct">${p.pct.toFixed(1)}%</span>
+      `;
+      legend.appendChild(item);
+    });
+
+    function highlight(idx) {
+      svg.querySelectorAll(".slice").forEach(el => {
+        el.classList.toggle("dim", idx !== null && el.getAttribute("data-idx") !== String(idx));
+      });
+      legend.querySelectorAll(".legend-item").forEach(el => {
+        el.style.opacity = (idx !== null && el.dataset.idx !== String(idx)) ? "0.4" : "1";
+      });
+    }
+    svg.querySelectorAll(".slice").forEach(el => {
+      el.addEventListener("mouseenter", () => highlight(el.getAttribute("data-idx")));
+      el.addEventListener("mouseleave", () => highlight(null));
+    });
+    legend.querySelectorAll(".legend-item").forEach(el => {
+      el.addEventListener("mouseenter", () => highlight(el.dataset.idx));
+      el.addEventListener("mouseleave", () => highlight(null));
+    });
+
+    chartArea.appendChild(svg);
+    chartArea.appendChild(legend);
+  }
+
+  function fillTable(allocations) {
+    resultTable.style.display = "table";
+    resultBody.innerHTML = "";
+    allocations.forEach(a => {
+      const tr = document.createElement("tr");
+      const color = PALETTE[a.colorIdx % PALETTE.length];
+      tr.innerHTML = `
+        <td><span class="dot" style="background:${color}"></span></td>
+        <td class="name-cell">${escapeHtml(a.name)}</td>
+        <td>${a.mode === "mask" ? "/" + a.value : a.value + " hosts"}</td>
+        <td>${intToIp(a.network)}</td>
+        <td>/${a.prefix}</td>
+        <td>${intToIp(a.firstUsable)} – ${intToIp(a.lastUsable)}</td>
+        <td>${intToIp(a.broadcast)}</td>
+        <td>${a.usableHosts.toLocaleString()}</td>
+      `;
+      resultBody.appendChild(tr);
+    });
+  }
+
+  function setNewMode(mode) {
+    newMode = mode;
+    const isMask = mode === "mask";
+    newModeToggle.innerHTML = `<span class="swap-icon">⇄</span>${isMask ? "/mask" : "hosts"}`;
+    newValueWrap.innerHTML = isMask
+      ? '<span class="value-prefix">/</span><input type="number" id="newValue" placeholder="26" min="0" max="32">'
+      : '<input type="number" id="newValue" placeholder="Hosts" min="1">';
+    document.getElementById("newValue").addEventListener("keydown", e => {
+      if (e.key === "Enter") addRequirement();
+    });
+  }
+
+  function addRequirement() {
+    const name = newName.value.trim() || `Subnet ${requirements.length + 1}`;
+    const valueEl = document.getElementById("newValue");
+    const v = parseInt(valueEl.value, 10);
+    const isMask = newMode === "mask";
+    const ok = isMask ? (Number.isInteger(v) && v >= 0 && v <= 32) : (v && v >= 1);
+    if (!ok) {
+      valueEl.closest(".value-wrap").classList.add("invalid");
+      valueEl.focus();
+      return;
+    }
+    requirements.push({ id: ++reqCounter, name, mode: newMode, value: v });
+    newName.value = "";
+    valueEl.value = "";
+    valueEl.closest(".value-wrap").classList.remove("invalid");
+    newName.focus();
+    render();
+  }
+
+  addBtn.addEventListener("click", addRequirement);
+  newModeToggle.addEventListener("click", () => setNewMode(newMode === "mask" ? "hosts" : "mask"));
+  newName.addEventListener("keydown", e => { if (e.key === "Enter") addRequirement(); });
+  document.getElementById("newValue").addEventListener("keydown", e => { if (e.key === "Enter") addRequirement(); });
+  parentInput.addEventListener("input", render);
+
+  // used by the classes view's "Plan subnets in …" button
+  window.setPlannerParent = function (cidr) {
+    parentInput.value = cidr;
+    render();
+  };
+
+  render();
+})();
+</script>
+
+<script>
+// ---------- IPv4 classes view + hash router ----------
+(function () {
+  "use strict";
+
+  const NS = "http://www.w3.org/2000/svg";
+  const CX = 250, CY = 250;
+  const OUTER = 200, INNER = 112;
+
+  const classes = [
+    {
+      id:'A', name:'Class A', color:'var(--A)',
+      share:0.5,
+      fullRange:'0.0.0.0 – 127.255.255.255',
+      mask:'255.0.0.0  (/8)',
+      privateCidr:'10.0.0.0/8',
+      use:'The largest blocks, historically handed to ISPs and very large organizations (e.g. early allocations to Apple, IBM, the U.S. military).',
+      sub:[
+        {label:'Public', frac:0.984375, color:'var(--A)', detail:'1.0.0.0 – 9.255.255.255, 11.0.0.0 – 126.255.255.255', addresses:'≈2,113,929,216 addresses'},
+        {label:'Private — 10.0.0.0/8', frac:0.0078125, color:'var(--A-dim)', dim:true, detail:'10.0.0.0 – 10.255.255.255', addresses:'16,777,216 addresses'},
+        {label:'Loopback — 127.0.0.0/8', frac:0.0078125, color:'#9AA3B5', detail:'127.0.0.0 – 127.255.255.255 (e.g. 127.0.0.1)', addresses:'16,777,216 addresses'}
+      ]
+    },
+    {
+      id:'B', name:'Class B', color:'var(--B)',
+      share:0.25,
+      fullRange:'128.0.0.0 – 191.255.255.255',
+      mask:'255.255.0.0  (/16)',
+      privateCidr:'172.16.0.0/12',
+      use:'Mid-size blocks used by universities, hospitals, and mid-to-large businesses.',
+      sub:[
+        {label:'Public', frac:0.9990234, color:'var(--B)', detail:'128.0.0.0 – 172.15.255.255, 172.32.0.0 – 191.255.255.255', addresses:'≈1,072,693,248 addresses'},
+        {label:'Private — 172.16.0.0/12', frac:0.0009766, color:'var(--B-dim)', dim:true, detail:'172.16.0.0 – 172.31.255.255', addresses:'1,048,576 addresses'}
+      ]
+    },
+    {
+      id:'C', name:'Class C', color:'var(--C)',
+      share:0.125,
+      fullRange:'192.0.0.0 – 223.255.255.255',
+      mask:'255.255.255.0  (/24)',
+      privateCidr:'192.168.0.0/16',
+      use:'Small blocks for home and small-business LANs — the range most home routers hand out from.',
+      sub:[
+        {label:'Public', frac:0.9998779, color:'var(--C)', detail:'192.0.0.0 – 192.167.255.255, 192.169.0.0 – 223.255.255.255', addresses:'≈536,805,376 addresses'},
+        {label:'Private — 192.168.0.0/16', frac:0.0001221, color:'var(--C-dim)', dim:true, detail:'192.168.0.0 – 192.168.255.255', addresses:'65,536 addresses'}
+      ]
+    },
+    {
+      id:'D', name:'Class D', color:'var(--D)',
+      share:0.0625,
+      fullRange:'224.0.0.0 – 239.255.255.255',
+      mask:'— (no host/network split)',
+      use:'Reserved for multicasting — one sender, many receivers at once (streaming, video conferencing, live market data). Never split into public/private.',
+      sub:null
+    },
+    {
+      id:'E', name:'Class E', color:'var(--E)',
+      share:0.0625,
+      fullRange:'240.0.0.0 – 255.255.255.255',
+      mask:'— (no host/network split)',
+      use:'Reserved for research and future use. Not allocated for general public or private use.',
+      sub:null
+    }
+  ];
+
+  // --- geometry helpers ----------------------------------------------------
+  function polar(cx, cy, r, angleDeg){
+    const a = (angleDeg - 90) * Math.PI / 180;
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  }
+  function arcPath(cx, cy, rOuter, rInner, startDeg, endDeg){
+    const large = (endDeg - startDeg) > 180 ? 1 : 0;
+    const [x1,y1] = polar(cx,cy,rOuter,startDeg);
+    const [x2,y2] = polar(cx,cy,rOuter,endDeg);
+    const [x3,y3] = polar(cx,cy,rInner,endDeg);
+    const [x4,y4] = polar(cx,cy,rInner,startDeg);
+    return [
+      `M ${x1} ${y1}`,
+      `A ${rOuter} ${rOuter} 0 ${large} 1 ${x2} ${y2}`,
+      `L ${x3} ${y3}`,
+      `A ${rInner} ${rInner} 0 ${large} 0 ${x4} ${y4}`,
+      'Z'
+    ].join(' ');
+  }
+  function fmtPct(f){
+    if(f*100 >= 1) return (f*100).toFixed(f*100<10?2:1).replace(/\.0+$/,'') + '%';
+    return (f*100).toFixed(3) + '%';
+  }
+
+  // --- rendering: chart ------------------------------------------------
+  const svg = document.getElementById('ringSvg');
+  const chartNote = document.getElementById('chartNote');
+  const rightCol = document.getElementById('rightCol');
+
+  function clearSvg(){ while(svg.firstChild) svg.removeChild(svg.firstChild); }
+
+  // clicks go through the hash so the browser back button works
+  function openClass(c){ location.hash = 'classes/' + c.id; }
+
+  function renderOverview(){
+    clearSvg();
+    let angle = 0;
+    classes.forEach(c=>{
+      const start = angle;
+      const end = angle + c.share*360;
+      angle = end;
+      const path = document.createElementNS(NS,'path');
+      path.setAttribute('d', arcPath(CX,CY,OUTER,INNER,start,end));
+      path.setAttribute('fill', c.color);
+      path.classList.add('wedge');
+      path.style.opacity = 0.96;
+      path.addEventListener('click', ()=> openClass(c));
+      svg.appendChild(path);
+
+      // label
+      const mid = (start+end)/2;
+      const [lx,ly] = polar(CX,CY,(OUTER+INNER)/2, mid);
+      const t = document.createElementNS(NS,'text');
+      t.setAttribute('x', lx); t.setAttribute('y', ly+5);
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('font-family',"IBM Plex Mono, monospace");
+      t.setAttribute('font-weight','600');
+      t.setAttribute('font-size', c.share>0.08 ? 16 : 12);
+      t.setAttribute('fill', '#fff');
+      t.style.pointerEvents='none';
+      t.textContent = c.id;
+      svg.appendChild(t);
+    });
+
+    addCenterLabel('IPv4 space', '2³² addresses');
+    renderLegend();
+    renderIntroPanel();
+    chartNote.textContent = 'Wedge size = share of the full IPv4 address space. Click a class to explore it.';
+  }
+
+  function addCenterLabel(big, small){
+    const t1 = document.createElementNS(NS,'text');
+    t1.setAttribute('x',CX); t1.setAttribute('y',CY-4);
+    t1.setAttribute('class','centerLabel big');
+    t1.textContent = big;
+    svg.appendChild(t1);
+    const t2 = document.createElementNS(NS,'text');
+    t2.setAttribute('x',CX); t2.setAttribute('y',CY+18);
+    t2.setAttribute('class','centerLabel small');
+    t2.textContent = small;
+    svg.appendChild(t2);
+  }
+
+  function renderDetail(c){
+    clearSvg();
+
+    // apply a visibility floor so slivers stay clickable/legible, then renormalize
+    const FLOOR = 0.06;
+    const floored = c.sub.map(s => Math.max(s.frac, FLOOR));
+    const total = floored.reduce((a,b)=>a+b,0);
+    const display = floored.map(v=>v/total);
+
+    let angle = 0;
+    c.sub.forEach((s,i)=>{
+      const start = angle;
+      const end = angle + display[i]*360;
+      angle = end;
+      const path = document.createElementNS(NS,'path');
+      path.setAttribute('d', arcPath(CX,CY,OUTER,INNER,start,end));
+      path.setAttribute('fill', s.color);
+      path.classList.add('wedge','locked');
+      svg.appendChild(path);
+
+      const mid=(start+end)/2;
+      const [lx,ly] = polar(CX,CY,(OUTER+INNER)/2+6, mid);
+      const t = document.createElementNS(NS,'text');
+      t.setAttribute('x', lx); t.setAttribute('y', ly);
+      t.setAttribute('text-anchor','middle');
+      t.setAttribute('font-family',"IBM Plex Mono, monospace");
+      t.setAttribute('font-weight','600');
+      t.setAttribute('font-size', 12.5);
+      // dim tints follow the theme, so their label follows the theme text colour
+      t.setAttribute('fill', s.dim ? 'var(--text)' : '#fff');
+      t.style.pointerEvents='none';
+      t.textContent = fmtPct(s.frac);
+      svg.appendChild(t);
+    });
+
+    addCenterLabel(c.id, c.name);
+    renderDetailPanel(c);
+    chartNote.textContent = 'Segment sizes are enlarged for visibility — labels show the true share of ' + c.name + '.';
+  }
+
+  // --- right column: legend + panels ------------------------------------
+  function renderLegend(){
+    rightCol.innerHTML = '';
+    const legend = document.createElement('div');
+    legend.className='classLegend';
+    classes.forEach(c=>{
+      const row = document.createElement('div');
+      row.className='legendRow';
+      row.style.setProperty('--rowColor', c.color);
+      row.innerHTML = `
+        <span class="swatch"></span>
+        <span class="legendText">
+          <div class="name">${c.name}${c.sub ? '' : ' <span style="font-weight:400;color:var(--text-dim)">(no split)</span>'}</div>
+          <div class="meta">${c.fullRange}</div>
+        </span>
+        <span class="legendPct">${fmtPct(c.share)}</span>
+        <span class="chev">›</span>
+      `;
+      row.addEventListener('click', ()=> openClass(c));
+      legend.appendChild(row);
+    });
+    rightCol.appendChild(legend);
+  }
+
+  function renderIntroPanel(){
+    const panel = document.createElement('div');
+    panel.className='panel detailPanel';
+    panel.style.marginTop='16px';
+    panel.innerHTML = `
+      <h2 style="font-size:15px;">Reading this chart</h2>
+      <p class="sub" style="margin-bottom:0;">
+        Classes A, B and C carve up almost the whole usable address space and each reserve one small block
+        (RFC&nbsp;1918) for private, internal networks — the addresses your router hands to devices at home.
+        Classes D and E aren't split this way: D is reserved for multicast, E for research.
+        When planning a LAN, start from one of those private blocks.
+      </p>
+    `;
+    rightCol.appendChild(panel);
+  }
+
+  function backButton(){
+    const back = document.createElement('button');
+    back.className='backBtn';
+    back.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg> All classes`;
+    back.addEventListener('click', ()=> { location.hash = 'classes'; });
+    return back;
+  }
+
+  function renderDetailPanel(c){
+    rightCol.innerHTML = '';
+    rightCol.appendChild(backButton());
+
+    const panel = document.createElement('div');
+    panel.className='panel detailPanel';
+
+    let rows = c.sub.map(s=>`
+      <tr>
+        <td class="tag"><span class="cdot" style="background:${s.color}"></span></td>
+        <td>
+          <div class="label">${s.label}</div>
+          <div class="val">${s.detail}</div>
+          <div class="val">${s.addresses}</div>
+        </td>
+        <td class="pct">${fmtPct(s.frac)}</td>
+      </tr>
+    `).join('');
+
+    panel.innerHTML = `
+      <h2>${c.name}</h2>
+      <p class="sub">${c.fullRange} &nbsp;·&nbsp; mask ${c.mask}</p>
+      <table class="rangeTable">${rows}</table>
+      <div class="useLine"><b>Typically used by:</b> ${c.use}</div>
+      <a class="planBtn" href="#plan/${c.privateCidr}">
+        Plan subnets in <code>${c.privateCidr}</code> →
+      </a>
+    `;
+    rightCol.appendChild(panel);
+  }
+
+  function showReservedInfo(c){
+    clearSvg();
+
+    const path = document.createElementNS(NS,'path');
+    path.setAttribute('d', arcPath(CX,CY,OUTER,INNER,0,360));
+    path.setAttribute('fill', c.color);
+    path.classList.add('wedge','locked');
+    svg.appendChild(path);
+    addCenterLabel(c.id, c.name);
+    chartNote.textContent = c.name + ' is a single reserved block — it has no public/private split.';
+
+    rightCol.innerHTML = '';
+    rightCol.appendChild(backButton());
+
+    const panel = document.createElement('div');
+    panel.className='panel detailPanel';
+    panel.innerHTML = `
+      <h2>${c.name}</h2>
+      <p class="sub">${c.fullRange} &nbsp;·&nbsp; ${fmtPct(c.share)} of the IPv4 space</p>
+      <div class="useLine" style="margin-top:0;border-top:none;padding-top:0;"><b>Typically used for:</b> ${c.use}</div>
+      <div class="useLine"><b>In the planner:</b> these addresses aren't assigned to hosts, so there's nothing to subnet here.</div>
+    `;
+    rightCol.appendChild(panel);
+  }
+
+  // --- router ---------------------------------------------------------
+  //   #                 → planner
+  //   #plan/<cidr>      → planner, with <cidr> loaded as the parent network
+  //   #classes[/<A-E>]  → classes view, optionally opened on one class
+  const views = {
+    planner: document.getElementById('plannerView'),
+    classes: document.getElementById('classesView')
+  };
+  const tabs = document.querySelectorAll('.tabs a');
+
+  function show(name){
+    Object.entries(views).forEach(([k, el]) => { el.hidden = k !== name; });
+    tabs.forEach(t => t.classList.toggle('active', t.dataset.view === name));
+  }
+
+  function route(){
+    const h = decodeURIComponent(location.hash.slice(1));
+    if (h.startsWith('plan/')) {
+      window.setPlannerParent(h.slice(5));
+      history.replaceState(null, '', location.pathname + location.search);
+      show('planner');
+      window.scrollTo(0, 0);
+      return;
+    }
+    if (h === 'classes' || h.startsWith('classes/')) {
+      show('classes');
+      const id = (h.split('/')[1] || '').toUpperCase();
+      const c = classes.find(x => x.id === id);
+      if (!c) renderOverview();
+      else if (c.sub) renderDetail(c);
+      else showReservedInfo(c);
+      return;
+    }
+    show('planner');
+  }
+
+  window.addEventListener('hashchange', route);
+  route();
+})();
+</script>
+</body>
+</html>
