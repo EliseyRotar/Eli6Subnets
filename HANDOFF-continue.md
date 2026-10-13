@@ -96,7 +96,55 @@ continue con opencode ma a casa su un altro pc…" → **questo file**.
 
 ---
 
-## 3. Cosa è stato FATTO in questa sessione (Fase 1 ✅ COMPLETA)
+## 3. Cosa è stato FATTO (Fase 1 ✅ + Fase 2/3 ✅)
+
+### Fase 2/3 ✅ — ECharts + dashboard nei 4 tool (ultimo lavoro, tutto committato e pushato)
+
+Verifiche finali della Fase 2/3:
+- `.\node_modules\.bin\tsc.cmd --noEmit` → **0 errori**
+- `npm.cmd test` → **188 test / 11 file verdi** (a11y axe 0 violazioni; il rumore
+  `[ECharts] Can't get DOM width` è sparito grazie al guard clientWidth/clientHeight)
+- `npm.cmd run build` → ok, **chunk split**: `index.js 65.06 kB (19.56 gzip)` +
+  `echarts.js 493.10 kB (169.68 gzip)` via `manualChunks` in `vite.config.ts` (era 558 kB monolitico)
+
+Cosa c'è ora:
+- **`src/charts/index.ts`** — registry ECharts (import modulare `echarts/core` + PieChart,
+  TreemapChart, Tooltip, Legend, SVGRenderer). `renderChart(host, factory)` registra la factory
+  in `Map` e **ritorna silenzioso se `host.clientWidth/clientHeight === 0`** (view nascoste +
+  jsdom: niente init, niente rumore nei test); `refreshCharts()` (resize + setOption, rilegge i
+  token CSS → segue tema/lingua), `scheduleRefresh()` (coalescing rAF), `clearChart`,
+  listener `resize`. Palette: `seriesColor(i)` = fan su teal→cyan→blu, `cssVar()`,
+  `textColor/mutedColor/surfaceColor/dimColor`.
+- **`src/charts/builders.ts`** — `donutOption(slices, centerValue, centerLabel)` (donut con
+  centro testo, itemStyle bordo colore surface) e `treemapOption(nodes)` (breadcrumb off,
+  bordo surface). Tipi: `EChartsCoreOption` (`ECBasicOption`).
+- **`src/ui/kpi.ts`** — `KpiItem {label, value, hint?, percent?}` (**`hint?/percent?` devono
+  essere `string | undefined`/`number | undefined` per `exactOptionalPropertyTypes`**) +
+  `kpiRow(items)` → `<dl class="kpi-row">` con barra percentuale `aria-hidden`.
+- **`src/ui/dashboard.ts`** — 4 builder: `singleDashboard(info)`, `vlsmDashboard(base, result)`,
+  `splitDashboard(base, result)`, `supernetDashboard(summary, result)`; helper `dash()`,
+  `chartCard(title)` (escapeHtml sui titoli), `appendCharts`, `percentOf`. Ogni builder =
+  kpi-row + `.dash__charts` con 1-2 card `chart-card > .chart`.
+- **Wiring**: i 4 tool appendono la dashboard in `render()` (single: prima di `subnetSection`;
+  vlsm/split: dopo il check empty con `baseInfo`; supernet: prima di `subnetSection`);
+  `subnetListTable` è wrappato in `.card.card--flush`; `sidebar.activate()` chiama
+  `scheduleRefresh()` (le view partono con width 0); `main.ts` chiama `scheduleRefresh()` su
+  cambio tema (variabile `appliedTheme`) e su `onLangChange`.
+- **CSS**: `components.css` — `.result-section` ora è una **card** (surface+border+shadow,
+  `.chip-row` dentro con border-top), `.empty-state` dashed, `.card/.card__header/.card__title/
+  .card__body/.card--flush`, `.js-result-body`, `.dash`, `.dash__charts` (auto-fit minmax 15rem),
+  `.chart-card`, `.chart {height:14rem}`, `.kpi-row` (auto-fit minmax 9.5rem), `.kpi-card*`.
+- **i18n**: aggiunte 36 chiavi `kpi.*` + `chart.usableSplit/chart.allocation/chart.map` in
+  it **e** en (parità test ✓).
+- **Test**: `tests/ui.test.ts` +2 (`describe('dashboard')`: single ≥4 KPI + `.chart-card`,
+  supernet ≥4 KPI + 2 chart-card + table; VLSM: 2 KPI assertion dentro il 1° test vlsm
+  — attenzione: il 2° test vlsm lascia la view in empty state, quindi le assert VLSM
+  vanno nel 1º).
+- **16 commit one-file-per-commit** pushati: `ffc6019..da66ae9`
+  (charts/index → charts/builders → kpi → i18n en → i18n it → components.css → dashboard →
+  subnetView → 4 tool → main → sidebar → ui.test → vite.config).
+
+### Fase 1 ✅ (dettaglio storico)
 
 Verifiche superate alla fine della Fase 1:
 - `.\node_modules\.bin\tsc.cmd --noEmit` → **0 errori**
@@ -160,75 +208,64 @@ Verifiche superate alla fine della Fase 1:
 
 ---
 
-## 4. Dove ero arrivato ESATTAMENTE (inizio Fase 2)
+## 4. Dove ero arrivato ESATTAMENTE (inizio Fase 4 — nuovi calcolatori)
 
-Stavo per scrivere il modulo grafici. Ricerca tipi ECharts **già fatta**:
+Fase 2/3 chiusa e pushata (`da66ae9`). Prossimo: **Fase 4** = `range.ts`, `overlap.ts`,
+`ipv6.ts`, `cloud.ts` in `src/calc/` + persist + 4 nuovi pannelli.
 
-- Import modulare consigliato (Vite + tree-shaking):
-  ```ts
-  import * as echarts from 'echarts/core'
-  import { PieChart, TreemapChart, BarGraph?, BarChart, GraphChart } from 'echarts/charts'
-  import { TooltipComponent, LegendComponent, GridComponent } from 'echarts/components'
-  import { SVGRenderer } from 'echarts/renderers'
-  echarts.use([...])
-  ```
-- `node_modules/echarts/types/dist/core.d.ts` esporta (verificato):
-  `EChartsType as ECharts`, **`ECBasicOption as EChartsCoreOption`**, `init`,
-  `getInstanceByDom`, `use`, `dispose`, `registerTheme`, …
-- `dist/option.d.ts` esporta `EChartsOption`, `PieSeriesOption`, `TreemapSeriesOption`,
-  `GraphSeriesOption`, `LegendComponentOption`, `TooltipComponentFormatterCallback`, …
-- Renderer: **SVG** (crisp, leggero; i dataset sono piccoli).
+### Pattern da replicare per ogni nuovo tool (letto da codice esistente)
+1. **`src/calc/<nome>.ts`** — funzioni purhe che ritornano `T | ValidationFailure`
+   (type guard `isValidationFailure(value: unknown): value is ValidationFailure`);
+   input già tipizzato da `src/calc/ip.ts` (`parseCidr` etc.).
+2. **`src/state/persist.ts`** — estendere `CalculatorId` (linee 16-19, oggi
+   `'single'|'vlsm'|'split'|'supernet'`) + `CALCULATOR_IDS`; aggiungere lo slice in
+   `AppState.tools`, `defaultState()` e **ramo dedicato in `normalizeState()`** (lettura
+   dei campi con fallback, righe 129-152). `SCHEMA_VERSION` resta **1** (i nuovi campi
+   mancanti cadono sui default).
+3. **`src/ui/tools/<Nome>.ts`** — `mountX(main: HTMLElement): ToolPanel` seguendo il
+   contratto `src/ui/tools/types.ts`: `root`, `calculate({silent?})`, `refresh()`,
+   `hydrate(state)`, `exportCsv()`, `csvHeader`, `importCsv(rows)`; DOM `id="view-<id>"`,
+   `aria-labelledby="nav-<id>"`, form con `setFieldError`, `emptyState('empty.<id>')`
+   prima del primo calcolo, risultati in `.card` + `subnetSection`/`subnetListTable`
+   se applicabile, dashboard (`kpiRow`/`chartCard`) dove ha senso.
+4. **`src/main.ts`** — import + `panels: Record<CalculatorId, ToolPanel>` (riga 70) e
+   `mountFooter(shell, panels)`; hydrate/refresh loop già generico (`Object.values`).
+5. **Nav**: `NAV_SECTIONS` (`src/ui/shell/nav.ts`), icone (`src/ui/icons.ts`) e label
+   `nav.range/nav.overlap/nav.ipv6` **già presenti** → nessuna modifica se l'id è uno di
+   quelli già in `ViewId`.
+6. **i18n**: nuove chiavi `*.*` in **entrambi** `it.json`/`en.json` (parità verificata da
+   `tests/i18n.test.ts`); placeholder `{0}` con `t('chiave', arg)`.
+7. **Test**: un `tests/<nome>.test.ts` per la logica calc (coverage v8 ≥90% su
+   `src/calc/**` — **le nuove funzioni calc DEVONO essere testate**), + assert UI in
+   `tests/ui.test.ts`, a11y già gira su tutte le view renderizzate.
 
-### Design previsto modulo grafici (da implementare)
-`src/charts/index.ts`:
-- `renderChart(host: HTMLElement, factory: () => EChartsCoreOption): void`
-  — registra factory in `WeakMap`, `echarts.init(host, undefined, {renderer:'svg'})`, setOption;
-  tiene un `Set<HTMLElement>` per il refresh.
-- `refreshCharts(): void` — per ogni host: `getInstanceByDom(host)?.resize()` + `setOption(factory())`
-  (ri-legge i token CSS → tema dark/light aggiornato). **Chiamare da `sidebar.activate()` con
-  `requestAnimationFrame`** (i pannelli sono `display:none` finché non attivi → size 0).
-- `clearChart(host)` — dispose quando i risultati vengono azzerati (empty state).
-- `try/catch` sull'init: in jsdom deve fallire silenziosamente (test non devono rompersi).
-- Palette dai token CSS: teal `--color-accent`, blue `--color-secondary`, muted, surface…
-  Lettura con `getComputedStyle(document.documentElement).getPropertyValue('--color-accent')`.
-
-`src/ui/kpi.ts`: `kpiRow(items: {label,value,hint?}[])` → HTML `.kpi-row > .kpi-card` (card con label, valore mono grande, hint).
-
-### Integrazione prevista nei 4 tool (risultati già renderizzati via `subnetView.ts`)
-Prependere al `.js-result-body` un blocco dashboard:
-```html
-<div class="dash">
-  <div class="kpi-row">…4 KPI…</div>
-  <div class="dash__charts">
-    <div class="card chart-card"><div class="chart" data-chart></div></div>  ← donut
-    <div class="card chart-card"><div class="chart" data-chart></div></div>  ← treemap
-  </div>
-</div>
-```
-- **single**: KPI (prefisso, host utilizzabili, classe, tipo) + donut "utilizzabili vs riservati"
-  (dati: `SubnetInfo.totalAddresses`, `usableHosts`).
-- **vlsm**: KPI (sottoreti allocate, % efficienza, indirizzi liberi, richieste) +
-  donut (una fetta per allocazione + libero nel base) + treemap (allocazioni dentro la rete base).
-  Dati da `VlsmResult`/`VlsmAllocation` (`src/calc/vlsm.ts:17-28` — leggere i campi).
-- **split**: KPI (n sottoreti, prefisso figlio, efficienza) + donut + treemap da `SplitResult`.
-- **supernet**: KPI (reti riassunte, prefisso sommario, copertura) + treemap dei child nel summary.
-  Dati da `SupernetResult` (`src/calc/supernet.ts:18`).
-- Classi di servizio da `src/calc/{vlsm,split,supernet}.ts`: **leggere le interfacce prima**.
-- CSS: aggiungere `.card`, `.kpi-row`, `.kpi-card`, `.chart-card`, `.chart` in `components.css`
-  (token già pronti: `--radius-lg/xl`, `--shadow-sm/md`, `--color-surface`, `--color-border`).
+### Contenuto previsto per la Fase 4
+- **`range.ts`** — da start+end IP → lista CIDR che copre il range esattamente
+  (algoritmo greedy: allinea e raddoppia). Input persist: `tools.range = {start, end}`.
+- **`overlap.ts`** — lista CIDR → coppie sovrapposte con intersezione (+ suggerimento
+  possibili aggregazioni). Input: `tools.overlap = {cidrs: string[]}` (pattern `supernet.cidrs`).
+- **`ipv6.ts`** — parse IPv6 + prefisso → indirizzo rete/broadcast, range, conto
+  `2^(128-prefix)`, validazione anche nei campi esistenti se previsto. Input:
+  `tools.ipv6 = {cidr: string}`.
+- **`cloud.ts`** — CIDR → tabella riservati AWS/Azure (gateway = primo, DNS = secondo,
+  `-2`/`-5` utilizzabili, prefix min, SLP). **NB**: il piano originale parlava di
+  `ViewId 'cloud'` ma **non esiste in `ViewId`** → oppure implementare come opzione/pannello
+  dentro la vista single, oppure aggiungere l'id a `ViewId`+`VIEW_IDS`+`NAV_SECTIONS`
+  (decisione da prendere all'avvio della Fase 4).
 
 ---
 
 ## 5. Piano completo (todo-list aggiornata)
 
-- [x] **Fase 1** — Design system dark-first + sidebar/router hash (COMPLETE, 186 test verdi)
-- [ ] **Fase 2+3** — ECharts (`src/charts/index.ts`, `src/ui/kpi.ts`) + dashboard KPI/donut/treemap
-      nei 4 tool esistenti. ← **Siamo qui**
+- [x] **Fase 1** — Design system dark-first + sidebar/router hash (COMPLETE, 186 test)
+- [x] **Fase 2+3** — ECharts + dashboard KPI/donut/treemap nei 4 tool
+      (**COMPLETE: 188 test, build con chunk echarts separato, 16 commit pushati `ffc6019..da66ae9`**)
 - [ ] **Fase 4** — Nuovi calcoli in `src/calc/`: `range.ts` (IP range→CIDR set ottimale),
-      `overlap.ts` (due CIDR → sovrapposizione/intersezione), `ipv6.ts` (prefisso, range, /64),
-      `cloud.ts` (IP riservati AWS/Azure: gateway+2, DNS, prefix min; opzione cloud nei tool),
-      estendere `persist.tools` (nuovi slice: `range`, `overlap`, `ipv6`, `cloud`) + id in
-      `ViewId`/`CALCULATOR_IDS`/`NAV_SECTIONS` già pronti.
+      `overlap.ts` (CIDR multipli → sovrapposizioni), `ipv6.ts` (prefisso, range, /64),
+      `cloud.ts` (IP riservati AWS/Azure: gateway+2, DNS, prefix min; **nota: `ViewId`
+      oggi non ha `'cloud'` — decidere se vista nuova o sezione della single**),
+      estendere `persist.tools` (nuovi slice: `range`, `overlap`, `ipv6`, + eventuale `cloud`)
+      + panel `src/ui/tools/*` + wiring `main.ts` + test calc (coverage ≥90%) e UI. ← **Siamo qui**
 - [ ] **Fase 5** — Nuove viste: `classes` (anello A–E ECharts con drill-down, replicando
       `network_planner.html#classes`), `topology` (**editor drag&drop**: SVG/canvas, nodi
       router/switch/pc, drag con pointer events, zoom/pan, link etichettati con CIDR,
@@ -252,7 +289,7 @@ Prependere al `.js-result-body` un blocco dashboard:
 
 ```powershell
 npm.cmd run dev            # sviluppo
-npm.cmd test               # vitest (186 test)
+npm.cmd test               # vitest (188 test / 11 file)
 npm.cmd run build          # tsc --noEmit && vite build
 .\node_modules\.bin\tsc.cmd --noEmit   # typecheck (npx è BLOCCATO in questa shell)
 ```
@@ -265,22 +302,21 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ---
 
-## 7. GIT — stato e prossimo passo obbligato
+## 7. GIT — stato aggiornato
 
-- Repo locale `main`, remoto `https://github.com/EliseyRotar/Eli6Subnets.git`,
-  ultimo commit: `c8d36a7 ci: run the deploy workflow on Node 24 with current action majors`.
-- **Working tree attuale**: TUTTE le modifiche della Fase 1 sono non committate
-  (nuove: `src/ui/shell/{nav,sidebar,topbar}.ts`; modificate: tokens/layout/index.html/
-  main/persist/store/url/theme/footer/importExport/icons/i18n×2/4 tool/4 test/package.json+lock;
-  cancellate: `src/ui/tabs.ts`, `src/ui/header.ts`; untracked: `network_planner.html`,
-  `HANDOFF-continue.md`).
-- **A CASA**: `git pull` (se pushato) → `npm.cmd install` (serve per echarts/jsdom) →
-  leggere questo file → continuare Fase 2.
-- **Se non pushato prima di partire**: i file esistono solo su questo PC/OneDrive.
-- Quando si committerà: **UN FILE = UN COMMIT** con messaggio custom per file
-  (usare `git add <file>` mirato, mai `git add -A`), poi push. Non committare
-  `network_planner.html` (personale) salvo esplicita richiesta, né `HANDOFF-continue.md`
-  se non richiesto.
+- Repo locale `main` **sincronizzato** con remoto `https://github.com/EliseyRotar/Eli6Subnets.git`;
+  ultimo commit **`da66ae9 build: split the ECharts vendor chunk`** (push verde
+  `ffc6019..da66ae9`); deploy Pages aggiornato.
+- **Working tree PULITA** (`git status` → vuoto) tranne untracked personali
+  (`network_planner.html` è già stato committato in `b022d59`; `HANDOFF-continue.md`
+  committato in `ffc6019` — entrambi ora nel repo).
+- Convenzione confermata: **UN FILE = UN COMMIT** con messaggio custom, `git add <file>`
+  mirato, mai `git add -A`. Fase 2/3 committata in 16 commit (ordine dipendenze:
+  charts→kpi→i18n→css→dashboard→wiring→test→build).
+- Convenzioni viste in passato: i18n it/en può essere in 2 commit separati
+  (precedente: `e7f1d97` en, `d9cacae` it), il test di parità viaggia con `it.json`.
+- **Prossimo passo git**: lavorare Fase 4 e committare allo stesso modo, poi push
+  (chiedere esplicitamente prima di pushare se non richiesto dalla conversazione).
 
 ---
 
@@ -288,9 +324,10 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ```
 Apri il progetto Eli6Subnets. Leggi HANDOFF-continue.md per intero: contiene lo storico
-della chat, le decisioni prese, cosa è stato fatto (Fase 1 completa) e cosa manca.
-Verifica lo stato con git status, tsc --noEmit e npm.cmd test, poi prosegui dalla Fase 2
-(Integrazione ECharts + dashboard KPI nei 4 tool) seguendo il design previsto nel §4,
-rispettando le convenzioni (i18n it/en, nessuna firma AI, un file = un commit, dark-first
-con accento teal + blu secondario). Non committare/pushare senza chiedermelo.
+della chat, le decisioni prese, cosa è stato fatto (Fase 1 ✅ e Fase 2/3 ✅ complete,
+188 test verdi, pushato) e cosa manca. Verifica lo stato con git status, tsc --noEmit e
+npm.cmd test, poi prosegui dalla Fase 4 (nuovi calcolatori range/overlap/ipv6/cloud: il
+design e il pattern da replicare sono nel §4), rispettando le convenzioni (i18n it/en,
+nessuna firma AI, un file = un commit, dark-first con accento teal + blu secondario).
+Non committare/pushare senza chiedermelo.
 ```
