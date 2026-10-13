@@ -8,6 +8,7 @@ import {
   IconBookmark,
   IconBook,
   IconClasses,
+  IconCloud,
   IconOverlap,
   IconRange,
   IconSingle,
@@ -37,6 +38,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { id: 'vlsm',    icon: IconVlsm,     labelKey: 'nav.vlsm' },
       { id: 'split',   icon: IconSplit,    labelKey: 'nav.split' },
       { id: 'supernet', icon: IconSupernet, labelKey: 'nav.supernet' },
+      { id: 'cloud',   icon: IconCloud,    labelKey: 'nav.cloud' },
     ],
   },
   {
