@@ -21,6 +21,7 @@ import {
   type CiscoHandle,
 } from '../cisco'
 import { clear, escapeHtml, html, qs, qsa, setFieldError } from '../dom'
+import { vlsmDashboard } from '../dashboard'
 import { IconCross, IconPlus } from '../icons'
 import { alertBlock, emptyState, subnetSection } from '../subnetView'
 import { csvError, type ToolPanel } from './types'
@@ -159,6 +160,8 @@ export function mountVlsm(container: HTMLElement): ToolPanel {
       cisco.refresh()
       return
     }
+
+    if (baseInfo) body.appendChild(vlsmDashboard(baseInfo, lastResult))
 
     if (lastResult.allocations.length > 0) {
       body.appendChild(
