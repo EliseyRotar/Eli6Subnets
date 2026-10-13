@@ -96,7 +96,57 @@ continue con opencode ma a casa su un altro pc…" → **questo file**.
 
 ---
 
-## 3. Cosa è stato FATTO (Fase 1 ✅ + Fase 2/3 ✅)
+## 3. Cosa è stato FATTO (Fase 1 ✅ + Fase 2/3 ✅ + Fase 4 ✅)
+
+### Fase 4 ✅ — 4 nuovi calcolatori (ultimo lavoro, pushato `7afac97..f6cd764`)
+
+Verifiche: `tsc --noEmit` 0 errori · `npm.cmd test` → **273 test / 15 file verdi** ·
+coverage `src/calc` **98.53% lines** (soglia 90) · `npm.cmd run build` ok
+(`index.js 88.78 kB / 25.25 gzip` + `echarts.js 493.10 kB` separato).
+
+- **Calc puri** (ognuno con il suo `tests/*.test.ts`):
+  - `src/calc/range.ts` — `rangeToCidrs(start, end)` greedy allineato (≤64 blocchi),
+    error `error.range_order`; `RangeCidr {cidr, first, last, size}`.
+  - `src/calc/overlap.ts` — `findOverlaps(cidrs)` coppie con `relation`
+    (`'a-contains-b' | 'b-contains-a' | 'equal'`; nessun `partial`: due blocchi allineati
+    sono disgiunti o annidati), `spanToCidr` per l'intersezione; + `overlaps(a, b)` fast path;
+    error `error.overlap_min_entries`. **Semantica**: `first/last == estremi di j → a contiene b`.
+  - `src/calc/ipv6.ts` — `calcIpv6(cidr)` con **BigInt** (128 bit), parse `::` = head →
+    zeri → tail (**attenzione allo shift: shiftare head+tail insieme è SBAGLIATO**), normalise
+    RFC 5952 (lowercase, no leading zeros, run ≥2 → `::`, tie → primo a sinistra), flag
+    loopback/unspecified/linkLocal/ULA/multicast/global, `totalAddresses` stringa decimale;
+    error `error.ipv6_invalid`, `error.ipv6_prefix_range`.
+  - `src/calc/cloud.ts` — `calcCloud(cidr, 'aws'|'azure')`: AWS = primi 4 (router + 3 riservati)
+    + **ultimo** riservato; Azure = primi 5 (network, gateway, DNS, 2 riservati), ultimo
+    utilizzabile. `maxPrefix` (28/29) → `prefixOk = prefix <= maxPrefix` (più corto numerically
+    = sottorete più piccola → errore). `rows[].roleKey` = chiavi i18n `cloud.role.*`.
+- **Persist**: `CalculatorId`/`CALCULATOR_IDS` estesi a 8 (`+range,overlap,ipv6,cloud`),
+  `ViewId` = CalculatorId | topology|classes|guide|projects, `VIEW_IDS` 12 voci,
+  `tools.{range,overlap,ipv6,cloud}` + rami in `defaultState()` e `normalizeState()`
+  (ancora `SCHEMA_VERSION = 1`, campi mancanti → default).
+- **Nav/icone**: `nav.cloud` in sezione **tools** (`src/ui/shell/nav.ts`), `IconCloud` in
+  `src/ui/icons.ts`. La sidebar filtra per `registered` → le 4 view nuove appaiono
+  perché in `CALCULATOR_IDS`.
+- **4 pannelli** `src/ui/tools/{range,overlap,ipv6,cloud}.ts` — stesso contratto
+  `ToolPanel` (`root/calculate/refresh/hydrate/exportCsv/csvHeader/importCsv`),
+  `#view-X` + `aria-labelledby="nav-X"`, `emptyState('empty.X')`, KPI via `kpiRow`,
+  tabelle via **`simpleTable(headers, rows)`** (nuovo helper in `subnetView.ts`),
+  `alertBlock` per warning/success. overlap: righe dinamiche `.overlap-row`
+  (template + `BLANK_ROWS=2`, pattern simile a VLSM); cloud: `<select id="cloud-provider">`.
+- **i18n**: ~50 nuove chiavi ×2 lingue (nav.cloud, field.start/end/provider, action.check,
+  empty.×4, label.cidr/address/role/field/value/status/expanded/lastAddress/relation,
+  kpi.blocks/range/minPrefix/pairs/compared/span, overlap.×, ipv6.×, cloud.×,
+  csv.error.invalid + le 4 error.*).
+- **CSS**: `.overlap-rows/.overlap-row`, `select.field__input` cursor+background.
+- **main.ts**: `panels` ora `Record<CalculatorId, ToolPanel>` con8 mount.
+- **Test**: +8 file? no:4 nuovi file calc + **8 test UI** in `tests/ui.test.ts`
+  (range: decomposition + inverted; overlap: pair + disjoint; ipv6: derive + malformed;
+  cloud: AWS rows + switch Azure) → shell test ora **8 sidebar links/8 views**.
+  a11y: 0 violazioni su tutte le8 view renderizzate.
+- **21 commit one-file-per-commit** pushati `7afac97..f6cd764`.
+- **Decisione utente**: cloud = **vista dedicata** (scelta durante la sessione).
+
+### Fase 2/3 ✅ — ECharts + dashboard nei 4 tool
 
 ### Fase 2/3 ✅ — ECharts + dashboard nei 4 tool (ultimo lavoro, tutto committato e pushato)
 
@@ -208,70 +258,75 @@ Verifiche superate alla fine della Fase 1:
 
 ---
 
-## 4. Dove ero arrivato ESATTAMENTE (inizio Fase 4 — nuovi calcolatori)
+## 4. Dove ero arrivato ESATTAMENTE (inizio Fase 5 — viste di riferimento)
 
-Fase 2/3 chiusa e pushata (`da66ae9`). Prossimo: **Fase 4** = `range.ts`, `overlap.ts`,
-`ipv6.ts`, `cloud.ts` in `src/calc/` + persist + 4 nuovi pannelli.
+Fase 4 pushata (`f6cd764`). Prossimo: **Fase 5** = viste `classes`, `topology`,
+`guide`, `projects` (le `ViewId` sono già in `VIEW_IDS` e le label `nav.*` già
+nei dizionari; la sidebar le mostra appena entrate in `registered`).
 
-### Pattern da replicare per ogni nuovo tool (letto da codice esistente)
-1. **`src/calc/<nome>.ts`** — funzioni purhe che ritornano `T | ValidationFailure`
-   (type guard `isValidationFailure(value: unknown): value is ValidationFailure`);
-   input già tipizzato da `src/calc/ip.ts` (`parseCidr` etc.).
-2. **`src/state/persist.ts`** — estendere `CalculatorId` (linee 16-19, oggi
-   `'single'|'vlsm'|'split'|'supernet'`) + `CALCULATOR_IDS`; aggiungere lo slice in
-   `AppState.tools`, `defaultState()` e **ramo dedicato in `normalizeState()`** (lettura
-   dei campi con fallback, righe 129-152). `SCHEMA_VERSION` resta **1** (i nuovi campi
-   mancanti cadono sui default).
-3. **`src/ui/tools/<Nome>.ts`** — `mountX(main: HTMLElement): ToolPanel` seguendo il
-   contratto `src/ui/tools/types.ts`: `root`, `calculate({silent?})`, `refresh()`,
-   `hydrate(state)`, `exportCsv()`, `csvHeader`, `importCsv(rows)`; DOM `id="view-<id>"`,
-   `aria-labelledby="nav-<id>"`, form con `setFieldError`, `emptyState('empty.<id>')`
-   prima del primo calcolo, risultati in `.card` + `subnetSection`/`subnetListTable`
-   se applicabile, dashboard (`kpiRow`/`chartCard`) dove ha senso.
-4. **`src/main.ts`** — import + `panels: Record<CalculatorId, ToolPanel>` (riga 70) e
-   `mountFooter(shell, panels)`; hydrate/refresh loop già generico (`Object.values`).
-5. **Nav**: `NAV_SECTIONS` (`src/ui/shell/nav.ts`), icone (`src/ui/icons.ts`) e label
-   `nav.range/nav.overlap/nav.ipv6` **già presenti** → nessuna modifica se l'id è uno di
-   quelli già in `ViewId`.
-6. **i18n**: nuove chiavi `*.*` in **entrambi** `it.json`/`en.json` (parità verificata da
-   `tests/i18n.test.ts`); placeholder `{0}` con `t('chiave', arg)`.
-7. **Test**: un `tests/<nome>.test.ts` per la logica calc (coverage v8 ≥90% su
-   `src/calc/**` — **le nuove funzioni calc DEVONO essere testate**), + assert UI in
-   `tests/ui.test.ts`, a11y già gira su tutte le view renderizzate.
+### Attenzione: le viste non-calc non sono `CalculatorId`
+- `panels: Record<CalculatorId, ToolPanel>` in `main.ts` resta **solo per i 8
+  calcolatori** (CSV/CSV import live lì).
+- Le nuove viste vanno montate a parte (es. `mountGuide(main)` che restituisce
+  il suo `<section id="view-guide" aria-labelledby="nav-guide">`) e incluse nella
+  chiamata: `mountSidebar(app, [...CALCULATOR_IDS, 'classes', 'topology', 'guide', 'projects'])`
+  — `activate()` fa il toggle `.is-active` su tutto ciò che è in `registered`.
+- Se serve l'export, `importExport.activePanel()` già ritorna `null` per le viste
+  non-calc → messaggio `export.noCsvView` (verificare al primo utilizzo).
 
-### Contenuto previsto per la Fase 4
-- **`range.ts`** — da start+end IP → lista CIDR che copre il range esattamente
-  (algoritmo greedy: allinea e raddoppia). Input persist: `tools.range = {start, end}`.
-- **`overlap.ts`** — lista CIDR → coppie sovrapposte con intersezione (+ suggerimento
-  possibili aggregazioni). Input: `tools.overlap = {cidrs: string[]}` (pattern `supernet.cidrs`).
-- **`ipv6.ts`** — parse IPv6 + prefisso → indirizzo rete/broadcast, range, conto
-  `2^(128-prefix)`, validazione anche nei campi esistenti se previsto. Input:
-  `tools.ipv6 = {cidr: string}`.
-- **`cloud.ts`** — CIDR → tabella riservati AWS/Azure (gateway = primo, DNS = secondo,
-  `-2`/`-5` utilizzabili, prefix min, SLP). **NB**: il piano originale parlava di
-  `ViewId 'cloud'` ma **non esiste in `ViewId`** → oppure implementare come opzione/pannello
-  dentro la vista single, oppure aggiungere l'id a `ViewId`+`VIEW_IDS`+`NAV_SECTIONS`
-  (decisione da prendere all'avvio della Fase 4).
+### Contenuto per ciascuna vista
+- **`classes`** — anello A–E di classi IPv4 con drill-down: **leggere
+  `network_planner.html` (sezione `#classes`)** che è il riferimento visivo
+  dell'utente (dati già noti: classi A/B/C/D/E, range, maschera, reti private).
+  ECharts: `PieSeriesOption` con `radius: ['45%','70%']` (donut) → usare
+  `donutOption` in `src/charts/builders.ts` o variante; click sulla fetta →
+  dettaglio sotto. Registrare `PieChart` già fatto in `src/charts/index.ts`.
+  Nessun ToolPanel: view statica + grafico montato al mount.
+- **`topology`** — editor drag&drop SVG: nodi (router/switch/pc/server) + link
+  etichettati con CIDR; **pointer events** (pointerdown/move/up su elementi SVG,
+  `setPointerCapture`), pan/zoom opzionale, palette da drag o click-per-add.
+  Stato da persistire: nuovo slice `topology: { nodes: Node[], links: Link[] }`
+  in `AppState` + `defaultState` + `normalizeState` (SCHEMA_VERSION **resta 1**,
+  campo mancante → default vuoto). ⚠: `AppState` è anche ciò che la share-URL
+  (`url.ts`) serializza — verificare che i tipi stringa/numeri restino
+  JSON-safe e che `url.ts` subsetting includa (o escluda) `topology` di proposito.
+- **`guide`** — cheat sheet statica i18n: tabella /0…/32 (prefix, maschera,
+  wildcard, indirizzi, host utilizzabili — **calcolare a runtime** con
+  `prefixToMask`/`Math.pow` invece di 33 righe di testo in i18n), classi
+  storiche, RFC 1918, formule (2^(32-p), /N block size), 3-4 esercizi con
+  soluzione in `<details>`.
+- **`projects`** — salvataggio progetti con nome: suggerimento = chiave
+  dedicata `eli6subnets_projects` in localStorage (array `{id, name, savedAt,
+  state}` — `state` = intero `AppState` già serializzabile) **invece** di
+  allargare `AppState`, così non tocca `url.ts` né `SCHEMA_VERSION`.
+  Operazioni: salva corrente, lista, riapri (`setState` + re-idrate), rinomina,
+  elimina; conferma eliminazione con `alertBlock` o toast esistente.
+
+### Regole sempre valide (dalla Fase 4)
+- i18n: ogni chiave in **entrambi** i dizionari (`tests/i18n.test.ts` parità);
+  `applyTranslations` schiaccia i figli → `data-i18n-key` mai su elementi con
+  figli dinamici.
+- CSS-only classi dai token (`--color-*`, `--space-*`, `--radius-*`);
+  niente colori hardcodati (a11y contrast verificato da axe in 2 temi).
+- Un file = un commit con messaggio custom, `git add <file>` mirato.
+- Verifiche obbligatorie: `.\node_modules\.bin\tsc.cmd --noEmit`,
+  `npm.cmd test` (273 test, 15 file), `npm.cmd run build`.
 
 ---
 
 ## 5. Piano completo (todo-list aggiornata)
 
-- [x] **Fase 1** — Design system dark-first + sidebar/router hash (COMPLETE, 186 test)
-- [x] **Fase 2+3** — ECharts + dashboard KPI/donut/treemap nei 4 tool
-      (**COMPLETE: 188 test, build con chunk echarts separato, 16 commit pushati `ffc6019..da66ae9`**)
-- [ ] **Fase 4** — Nuovi calcoli in `src/calc/`: `range.ts` (IP range→CIDR set ottimale),
-      `overlap.ts` (CIDR multipli → sovrapposizioni), `ipv6.ts` (prefisso, range, /64),
-      `cloud.ts` (IP riservati AWS/Azure: gateway+2, DNS, prefix min; **nota: `ViewId`
-      oggi non ha `'cloud'` — decidere se vista nuova o sezione della single**),
-      estendere `persist.tools` (nuovi slice: `range`, `overlap`, `ipv6`, + eventuale `cloud`)
-      + panel `src/ui/tools/*` + wiring `main.ts` + test calc (coverage ≥90%) e UI. ← **Siamo qui**
-- [ ] **Fase 5** — Nuove viste: `classes` (anello A–E ECharts con drill-down, replicando
-      `network_planner.html#classes`), `topology` (**editor drag&drop**: SVG/canvas, nodi
-      router/switch/pc, drag con pointer events, zoom/pan, link etichettati con CIDR,
-      palette, salvataggio in `persist` → schema state), `guide` (tabella /0…/32, classi,
-      RFC1918, formule, esercizi — statica i18n), `projects` (progetti salvati con nome in
-      localStorage/`persist.projects[]`: salva/riapri/rinomina/elimina).
+- [x] **Fase 1** — Design system dark-first + sidebar/router hash (186 test)
+- [x] **Fase 2+3** — ECharts + dashboard KPI/donut/treemap nei 4 tool (188 test, push `ffc6019..da66ae9`)
+- [x] **Fase 4** — Nuovi calcoli `range/overlap/ipv6/cloud` + 4 pannelli + persist
+      (**COMPLETE: 273 test / 15 file, coverage calc 98.5%, push `7afac97..f6cd764`**)
+- [ ] **Fase 5** — Nuove viste non-calc: `classes` (anello A–E ECharts con drill-down, da
+      `network_planner.html#classes`), `topology` (**editor drag&drop** con pointer events,
+      slice `topology` in `AppState` per il salvataggio), `guide` (tabella /0…/32 calcolata
+      a runtime + RFC1918 + formule + esercizi), `projects` (progetti salvati in chiave
+      localStorage dedicata `eli6subnets_projects`: salva/riapri/rinomina/elimina).
+      ⚠ viste non-calc: montate a parte, NON in `panels`; aggiungere a `mountSidebar`
+      con spread (vedi §4). ← **Siamo qui**
 - [ ] **Fase 6** — Visualizzatore 32 bit interattivo (click per bit, scroll ottetti,
       stile cidr.xyz) nella vista single + copy didattico (tooltip "?" "perché" sui campi).
 - [ ] **Fase 7** — i18n it/en completo per tutto il nuovo, test per ogni modulo nuovo,
@@ -289,7 +344,8 @@ Fase 2/3 chiusa e pushata (`da66ae9`). Prossimo: **Fase 4** = `range.ts`, `overl
 
 ```powershell
 npm.cmd run dev            # sviluppo
-npm.cmd test               # vitest (188 test / 11 file)
+npm.cmd test               # vitest (273 test / 15 file)
+npm.cmd test -- --coverage # + coverage src/calc (98.5% lines)
 npm.cmd run build          # tsc --noEmit && vite build
 .\node_modules\.bin\tsc.cmd --noEmit   # typecheck (npx è BLOCCATO in questa shell)
 ```
@@ -304,19 +360,14 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ## 7. GIT — stato aggiornato
 
-- Repo locale `main` **sincronizzato** con remoto `https://github.com/EliseyRotar/Eli6Subnets.git`;
-  ultimo commit **`da66ae9 build: split the ECharts vendor chunk`** (push verde
-  `ffc6019..da66ae9`); deploy Pages aggiornato.
-- **Working tree PULITA** (`git status` → vuoto) tranne untracked personali
-  (`network_planner.html` è già stato committato in `b022d59`; `HANDOFF-continue.md`
-  committato in `ffc6019` — entrambi ora nel repo).
-- Convenzione confermata: **UN FILE = UN COMMIT** con messaggio custom, `git add <file>`
-  mirato, mai `git add -A`. Fase 2/3 committata in 16 commit (ordine dipendenze:
-  charts→kpi→i18n→css→dashboard→wiring→test→build).
-- Convenzioni viste in passato: i18n it/en può essere in 2 commit separati
-  (precedente: `e7f1d97` en, `d9cacae` it), il test di parità viaggia con `it.json`.
-- **Prossimo passo git**: lavorare Fase 4 e committare allo stesso modo, poi push
-  (chiedere esplicitamente prima di pushare se non richiesto dalla conversazione).
+- Repo locale `main` **sincronizzato**: ultimo commit **`f6cd764 test: cover the four new tool views`**
+  (push verde `7afac97..f6cd764`); prima `da66ae9` (Fase 2/3). Deploy Pages aggiornato.
+- **Working tree PULITA**.
+- Fase 4 committata in **21 commit one-file-per-commit** (calc+test, persist, i18n en/it,
+  icons, nav, simpleTable, 4 pannelli, main, css, test UI).
+- Convenzione: **UN FILE = UN COMMIT**, messaggio custom, `git add <file>` mirato,
+  mai `git add -A`; i18n it/en in 2 commit separati (it con il test di parità).
+- **Prossimo passo git**: lavorare Fase 5 e committare allo stesso modo, poi push.
 
 ---
 
@@ -324,10 +375,10 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ```
 Apri il progetto Eli6Subnets. Leggi HANDOFF-continue.md per intero: contiene lo storico
-della chat, le decisioni prese, cosa è stato fatto (Fase 1 ✅ e Fase 2/3 ✅ complete,
-188 test verdi, pushato) e cosa manca. Verifica lo stato con git status, tsc --noEmit e
-npm.cmd test, poi prosegui dalla Fase 4 (nuovi calcolatori range/overlap/ipv6/cloud: il
-design e il pattern da replicare sono nel §4), rispettando le convenzioni (i18n it/en,
-nessuna firma AI, un file = un commit, dark-first con accento teal + blu secondario).
-Non committare/pushare senza chiedermelo.
+della chat, le decisioni prese, cosa è stato fatto (Fase 1 ✅, Fase 2/3 ✅ e Fase 4 ✅
+complete, 273 test verdi, tutto pushato) e cosa manca. Verifica lo stato con git status,
+tsc --noEmit e npm.cmd test, poi prosegui dalla Fase 5 (viste classes/topology/guide/projects:
+il design è nel §4, attenzione alle viste non-calc che non stanno in `panels`),
+rispettando le convenzioni (i18n it/en, nessuna firma AI, un file = un commit, dark-first
+con accento teal + blu secondario). Non committare/pushare senza chiedermelo.
 ```
