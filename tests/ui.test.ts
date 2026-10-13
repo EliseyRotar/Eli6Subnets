@@ -27,11 +27,11 @@ function type(selector: string, value: string): void {
 }
 
 describe('app shell', () => {
-  it('mounts sidebar, topbar, four views and footer', () => {
+  it('mounts sidebar, topbar, eight views and footer', () => {
     expect(document.querySelector('.sidebar')).not.toBeNull()
     expect(document.querySelector('.topbar')).not.toBeNull()
-    expect(document.querySelectorAll('.sidebar__link')).toHaveLength(4)
-    for (const id of ['single', 'vlsm', 'split', 'supernet']) {
+    expect(document.querySelectorAll('.sidebar__link')).toHaveLength(8)
+    for (const id of ['single', 'vlsm', 'split', 'supernet', 'range', 'overlap', 'ipv6', 'cloud']) {
       expect(document.querySelector(`#view-${id}`)).not.toBeNull()
     }
     expect(document.querySelector('.footer')).not.toBeNull()
@@ -188,6 +188,99 @@ describe('supernet tool', () => {
     expect(results.querySelector('.alert--warning')).not.toBeNull()
     expect(results.textContent).toContain('Sommarizzazione impura')
     expect(results.textContent).toContain('192.168.3.0/24')
+  })
+})
+
+describe('range tool', () => {
+  it('decomposes an unaligned range into aligned blocks', () => {
+    q<HTMLAnchorElement>('#nav-range').click()
+    type('#range-start', '192.168.1.100')
+    type('#range-end', '192.168.1.200')
+    submit('#range-form')
+    const view = q('#view-range')
+    expect(view.querySelectorAll('.kpi-card')).toHaveLength(4)
+    expect(view.querySelectorAll('.js-result-body tbody tr').length).toBeGreaterThan(1)
+    expect(view.textContent).toContain('192.168.1.100/30')
+  })
+
+  it('flags an inverted range', () => {
+    type('#range-start', '10.0.0.10')
+    type('#range-end', '10.0.0.1')
+    submit('#range-form')
+    expect(q('#range-end-error').textContent).toContain('successivo')
+    expect(q('#view-range .empty-state')).not.toBeNull()
+  })
+})
+
+describe('overlap tool', () => {
+  const fill = (values: string[]): void => {
+    const inputs = document.querySelectorAll<HTMLInputElement>('#view-overlap .overlap-row__input')
+    values.forEach((value, index) => {
+      const input = inputs[index]
+      if (!input) throw new Error(`missing overlap row ${index}`)
+      input.value = value
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+  }
+
+  it('reports the overlapping pair', () => {
+    q<HTMLAnchorElement>('#nav-overlap').click()
+    fill(['10.0.0.0/8', '10.1.0.0/16'])
+    submit('#overlap-form')
+    const view = q('#view-overlap')
+    expect(view.querySelectorAll('.kpi-card')).toHaveLength(4)
+    expect(view.querySelector('.kpi-card__value')?.textContent).toBe('1')
+    expect(view.textContent).toContain('A contiene B')
+    expect(view.textContent).toContain('10.1.0.0/16')
+  })
+
+  it('reports disjoint networks as a success', () => {
+    fill(['192.168.0.0/24', '192.168.1.0/24'])
+    submit('#overlap-form')
+    const view = q('#view-overlap')
+    expect(view.querySelector('.alert--success')).not.toBeNull()
+    expect(view.querySelectorAll('.kpi-card__value')[0]?.textContent).toBe('0')
+  })
+})
+
+describe('ipv6 tool', () => {
+  it('derives network and size', () => {
+    q<HTMLAnchorElement>('#nav-ipv6').click()
+    type('#ipv6-cidr', '2001:db8::1/64')
+    submit('#ipv6-form')
+    const view = q('#view-ipv6')
+    expect(view.querySelectorAll('.kpi-card')).toHaveLength(4)
+    expect(view.textContent).toContain('2001:db8::')
+    expect(view.textContent).toContain('2^64')
+  })
+
+  it('rejects a malformed address', () => {
+    type('#ipv6-cidr', 'zz::1/64')
+    submit('#ipv6-form')
+    expect(q('#ipv6-error').textContent).not.toBe('')
+    expect(q('#view-ipv6 .empty-state')).not.toBeNull()
+  })
+})
+
+describe('cloud tool', () => {
+  it('lists the AWS reserved addresses', () => {
+    q<HTMLAnchorElement>('#nav-cloud').click()
+    type('#cloud-cidr', '10.0.1.0/24')
+    submit('#cloud-form')
+    const view = q('#view-cloud')
+    expect(view.querySelectorAll('.kpi-card')).toHaveLength(4)
+    expect(view.textContent).toContain('10.0.1.255')
+    expect(view.textContent).toContain('251')
+    expect(view.textContent).toContain('Router di sottorete')
+  })
+
+  it('switches to Azure rules', () => {
+    const select = q<HTMLSelectElement>('#cloud-provider')
+    select.value = 'azure'
+    select.dispatchEvent(new Event('change', { bubbles: true }))
+    const view = q('#view-cloud')
+    expect(view.textContent).toContain('Gateway Azure')
+    expect(view.textContent).toContain('10.0.1.5')
   })
 })
 
