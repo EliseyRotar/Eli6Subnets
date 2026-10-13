@@ -127,3 +127,8 @@ export const IconOverlap = svg(
 export const IconV6 = svg(
   '<path d="M4 6v8h5"/><path d="M4 10h4"/><path d="M11 14V6l4 8V6"/><path d="M18 6v8h3"/>',
 )
+
+/** Cloud outline — AWS/Azure reserved addresses. */
+export const IconCloud = svg(
+  '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/>',
+)
