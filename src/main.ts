@@ -12,6 +12,7 @@ import './styles/layout.css'
 import './styles/components.css'
 
 import { applyTranslations, getLang, initLang, onLangChange, setLang } from './i18n'
+import { scheduleRefresh } from './charts'
 import {
   CALCULATOR_IDS,
   loadState,
@@ -95,9 +96,15 @@ function bootstrap(): void {
 
   // Cross-cutting sync: the store is the single source of truth for theme
   // and language, so imports and New Session travel through the same path
-  // as the topbar toggles.
+  // as the topbar toggles. Charts rebuild when either preference changes —
+  // their palette and labels are read from the live CSS tokens.
+  let appliedTheme = initial.theme
   subscribe(state => {
     applyTheme(state.theme)
+    if (state.theme !== appliedTheme) {
+      appliedTheme = state.theme
+      scheduleRefresh()
+    }
     if (getLang() !== state.lang) setLang(state.lang)
   })
 
@@ -105,6 +112,7 @@ function bootstrap(): void {
     if (getState().lang !== lang) patchState({ lang })
     for (const panel of Object.values(panels)) panel.refresh()
     topbar.refresh()
+    scheduleRefresh()
   })
 }
 
