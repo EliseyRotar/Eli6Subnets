@@ -13,20 +13,34 @@ export const SCHEMA_VERSION = 1
  * Views that are calculators: they hold persisted inputs, render a panel
  * and support CSV import/export.
  */
-export type CalculatorId = 'single' | 'vlsm' | 'split' | 'supernet'
-
-/** Callee-facing list used to register panels and sidebar entries. */
-export const CALCULATOR_IDS: CalculatorId[] = ['single', 'vlsm', 'split', 'supernet']
-
-/**
- * Every navigable view in the sidebar. Widened as the redesign rolls out
- * (range → CIDR, overlap, IPv6, topology, classes, guide, projects).
- */
-export type ViewId =
-  | CalculatorId
+export type CalculatorId =
+  | 'single'
+  | 'vlsm'
+  | 'split'
+  | 'supernet'
   | 'range'
   | 'overlap'
   | 'ipv6'
+  | 'cloud'
+
+/** Callee-facing list used to register panels and sidebar entries. */
+export const CALCULATOR_IDS: CalculatorId[] = [
+  'single',
+  'vlsm',
+  'split',
+  'supernet',
+  'range',
+  'overlap',
+  'ipv6',
+  'cloud',
+]
+
+/**
+ * Every navigable view in the sidebar. Widened as the redesign rolls out
+ * (topology, classes, guide and projects arrive with later phases).
+ */
+export type ViewId =
+  | CalculatorId
   | 'topology'
   | 'classes'
   | 'guide'
@@ -34,8 +48,8 @@ export type ViewId =
 
 export const VIEW_IDS: ViewId[] = [
   'single', 'vlsm', 'split', 'supernet',
-  'range', 'overlap', 'ipv6', 'topology',
-  'classes', 'guide', 'projects',
+  'range', 'overlap', 'ipv6', 'cloud',
+  'topology', 'classes', 'guide', 'projects',
 ]
 
 export type ThemeName = 'light' | 'dark'
@@ -55,6 +69,10 @@ export interface AppState {
     vlsm:     { baseCidr: string; requests: VlsmRow[] }
     split:    { cidr: string; count: string }
     supernet: { cidrs: string[] }
+    range:    { start: string; end: string }
+    overlap:  { cidrs: string[] }
+    ipv6:     { cidr: string }
+    cloud:    { cidr: string; provider: 'aws' | 'azure' }
   }
   cisco: {
     interfaceName: string
@@ -73,6 +91,10 @@ export function defaultState(): AppState {
       vlsm:     { baseCidr: '', requests: [] },
       split:    { cidr: '', count: '' },
       supernet: { cidrs: [] },
+      range:    { start: '', end: '' },
+      overlap:  { cidrs: [] },
+      ipv6:     { cidr: '' },
+      cloud:    { cidr: '', provider: 'aws' },
     },
     cisco: {
       interfaceName: '',
@@ -130,6 +152,10 @@ export function normalizeState(raw: unknown): AppState | null {
   const vlsm     = isRecord(tools['vlsm'])     ? tools['vlsm']     : {}
   const split    = isRecord(tools['split'])    ? tools['split']    : {}
   const supernet = isRecord(tools['supernet']) ? tools['supernet'] : {}
+  const range    = isRecord(tools['range'])    ? tools['range']    : {}
+  const overlap  = isRecord(tools['overlap'])  ? tools['overlap']  : {}
+  const ipv6     = isRecord(tools['ipv6'])     ? tools['ipv6']     : {}
+  const cloud    = isRecord(tools['cloud'])    ? tools['cloud']    : {}
 
   return {
     version:    SCHEMA_VERSION,
@@ -149,6 +175,16 @@ export function normalizeState(raw: unknown): AppState | null {
         count: str(split['count'], ''),
       },
       supernet: { cidrs: strList(supernet['cidrs']) },
+      range: {
+        start: str(range['start'], ''),
+        end:   str(range['end'], ''),
+      },
+      overlap: { cidrs: strList(overlap['cidrs']) },
+      ipv6:    { cidr: str(ipv6['cidr'], '') },
+      cloud: {
+        cidr: str(cloud['cidr'], ''),
+        provider: str(cloud['provider'], 'aws') === 'azure' ? 'azure' : 'aws',
+      },
     },
     cisco: {
       interfaceName: str(cisco['interfaceName'], base.cisco.interfaceName),
