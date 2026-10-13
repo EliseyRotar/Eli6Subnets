@@ -8,6 +8,18 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        // ECharts dwarfs the app chunk; keep it in its own file so the
+        // shell stays small and the library gets its own long-lived cache.
+        manualChunks(id): string | undefined {
+          if (id.includes('node_modules/echarts') || id.includes('node_modules\\echarts')) {
+            return 'echarts'
+          }
+          return undefined
+        },
+      },
+    },
   },
 
   test: {
