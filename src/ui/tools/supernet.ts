@@ -10,6 +10,7 @@ import type { AppState } from '../../state/persist'
 import { patchTool } from '../../state/store'
 import { mountCisco, routeHint, snippet, summaryRoute, type CiscoHandle } from '../cisco'
 import { clear, escapeHtml, html, qs, qsa, setFieldError } from '../dom'
+import { supernetDashboard } from '../dashboard'
 import { IconCross, IconPlus } from '../icons'
 import {
   alertBlock,
@@ -151,6 +152,7 @@ export function mountSupernet(container: HTMLElement): ToolPanel {
       return
     }
 
+    body.appendChild(supernetDashboard(superInfo, lastResult))
     body.appendChild(subnetSection(t('supernet.resultHeading'), superInfo))
     body.appendChild(
       lastResult.isPure
