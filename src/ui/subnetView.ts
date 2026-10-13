@@ -121,6 +121,29 @@ export function subnetListTable(subnets: SubnetInfo[], showIndex = true): HTMLEl
     </div>`)
 }
 
+/**
+ * Generic columnar table for tool-specific results (range entries,
+ * overlap pairs, reserved cloud addresses). Headers and cell values
+ * are rendered as plain text — callers pre-format numbers themselves.
+ */
+export function simpleTable(headers: string[], rows: string[][]): HTMLElement {
+  const head = headers
+    .map(value => `<th scope="col">${escapeHtml(value)}</th>`)
+    .join('')
+  const body = rows
+    .map(cells => `<tr>${cells
+      .map(value => `<td class="mono">${escapeHtml(value)}</td>`)
+      .join('')}</tr>`)
+    .join('')
+  return html(`
+    <div class="card card--flush">
+      <table class="result-table">
+        <thead><tr>${head}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`)
+}
+
 export type AlertKind = 'warning' | 'error' | 'success'
 
 const ALERT_ICONS: Record<AlertKind, string> = {
