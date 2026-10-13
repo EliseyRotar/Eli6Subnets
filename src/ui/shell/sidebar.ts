@@ -9,6 +9,7 @@
  */
 
 import { applyTranslations } from '../../i18n'
+import { scheduleRefresh } from '../../charts'
 import { getState, patchState, subscribe } from '../../state/store'
 import type { ViewId } from '../../state/persist'
 import { qs } from '../dom'
@@ -104,6 +105,9 @@ export function mountSidebar(
       title.setAttribute('data-i18n-key', labelKeys[view] ?? 'nav.single')
       applyTranslations(title.parentElement ?? title)
     }
+    // Charts were mounted while the panel was hidden (width 0): re-render
+    // them now that the view is visible.
+    scheduleRefresh()
   }
 
   const go = (view: ViewId): void => {
