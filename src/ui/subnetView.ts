@@ -113,10 +113,12 @@ export function subnetListTable(subnets: SubnetInfo[], showIndex = true): HTMLEl
   }).join('')
 
   return html(`
-    <table class="result-table">
-      <thead><tr>${indexHeader}${headers}</tr></thead>
-      <tbody>${body}</tbody>
-    </table>`)
+    <div class="card card--flush">
+      <table class="result-table">
+        <thead><tr>${indexHeader}${headers}</tr></thead>
+        <tbody>${body}</tbody>
+      </table>
+    </div>`)
 }
 
 export type AlertKind = 'warning' | 'error' | 'success'
