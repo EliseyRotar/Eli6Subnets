@@ -18,6 +18,7 @@ import {
   type CiscoHandle,
 } from '../cisco'
 import { clear, escapeHtml, html, qs, setFieldError } from '../dom'
+import { splitDashboard } from '../dashboard'
 import { emptyState, flagChips, subnetListTable } from '../subnetView'
 import { csvError, type ToolPanel } from './types'
 
@@ -93,6 +94,8 @@ export function mountEqualSplit(container: HTMLElement): ToolPanel {
       cisco.refresh()
       return
     }
+
+    if (baseInfo) body.appendChild(splitDashboard(baseInfo, lastResult))
 
     if (lastResult.actualCount !== requestedCount) {
       body.appendChild(
