@@ -28,6 +28,10 @@ import { mountSidebar } from './ui/shell/sidebar'
 import { mountTopbar } from './ui/shell/topbar'
 import { initToast } from './ui/toast'
 import { mountEqualSplit } from './ui/tools/equalSplit'
+import { mountIpv6 } from './ui/tools/ipv6'
+import { mountCloud } from './ui/tools/cloud'
+import { mountOverlap } from './ui/tools/overlap'
+import { mountRange } from './ui/tools/range'
 import { mountSingleSubnet } from './ui/tools/singleSubnet'
 import { mountSupernet } from './ui/tools/supernet'
 import { mountVlsm } from './ui/tools/vlsm'
@@ -67,12 +71,16 @@ function bootstrap(): void {
   main.className = 'main'
   shell.appendChild(main)
 
-  const panels: Record<CalculatorId, ToolPanel> = {
-    single: mountSingleSubnet(main),
-    vlsm:   mountVlsm(main),
-    split:  mountEqualSplit(main),
-    supernet: mountSupernet(main),
-  }
+const panels: Record<CalculatorId, ToolPanel> = {
+  single:   mountSingleSubnet(main),
+  vlsm:     mountVlsm(main),
+  split:    mountEqualSplit(main),
+  supernet: mountSupernet(main),
+  range:    mountRange(main),
+  overlap:  mountOverlap(main),
+  ipv6:     mountIpv6(main),
+  cloud:    mountCloud(main),
+}
 
   mountFooter(shell, panels)
 
