@@ -123,6 +123,11 @@ describe('vlsm tool', () => {
     expect(results.textContent).toContain('Engineering — 192.168.1.0/26')
     expect(results.textContent).toContain('Lab — 192.168.1.64/28')
     expect(results.textContent).toContain('ip route 192.168.1.0 255.255.255.0')
+
+    // Dashboard: KPI row and the two charts above the allocation list.
+    expect(results.querySelectorAll('.kpi-card').length).toBeGreaterThanOrEqual(4)
+    expect(results.querySelector('.kpi-card__value')?.textContent).toBe('2/2')
+    expect(results.querySelectorAll('.dash__charts .chart-card')).toHaveLength(2)
   })
 
   it('warns when the base network is too small', () => {
@@ -183,6 +188,21 @@ describe('supernet tool', () => {
     expect(results.querySelector('.alert--warning')).not.toBeNull()
     expect(results.textContent).toContain('Sommarizzazione impura')
     expect(results.textContent).toContain('192.168.3.0/24')
+  })
+})
+
+describe('dashboard', () => {
+  it('shows KPI cards and a chart for the single subnet', () => {
+    expect(document.querySelectorAll('#view-single .kpi-card').length).toBeGreaterThanOrEqual(4)
+    expect(document.querySelector('#view-single .chart-card')).not.toBeNull()
+    expect(document.querySelector('#view-single .chart')).not.toBeNull()
+  })
+
+  it('shows coverage KPIs and both charts for supernetting', () => {
+    const view = q('#view-supernet')
+    expect(view.querySelectorAll('.kpi-card').length).toBeGreaterThanOrEqual(4)
+    expect(view.querySelectorAll('.chart-card').length).toBe(2)
+    expect(view.querySelector('.result-table')).not.toBeNull()
   })
 })
 
