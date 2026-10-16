@@ -1,10 +1,11 @@
 # HANDOFF — Eli6Subnets: ripresa su altro PC (opencode)
 
 > **Uso**: apri opencode nella cartella del progetto a casa e incolla questo prompt:
-> *"Leggi `HANDOFF-continue.md` e riprendi il lavoro dalla Fase 2 esattamente dove siamo arrivati, seguendo le convenzioni elencate."*
+> *"Leggi `HANDOFF-continue.md` e riprendi il lavoro dalla fase indicata in §5 esattamente
+> dove siamo arrivati, seguendo le convenzioni elencate."*
 >
 > File creato: 02/10/2026, sessione opencode (modello: opencode/mimo-v2.6-flash-free).
-> ⚠️ **Le modifiche di questa sessione NON sono ancora state committate/pushate** (vedi §7).
+> Ultimo aggiornamento: 16/10/2026 — **Fase 5 completata e pushata** (vedi §3/§7).
 
 ---
 
@@ -94,11 +95,72 @@ e inizio dalla fondamenta." → **avviata Fase 1**, creata todo-list a 7 fasi.
 **Utente**: "aspetta io ora devo andare fai un file nella cartella con la tua chat e tutto,
 continue con opencode ma a casa su un altro pc…" → **questo file**.
 
+**(Sessione 16/10/2026 — ripresa)** Utente: "continue" → eseguita **Fase 5 per intero**:
+persist topology + projects storage, 4 viste (guide/classes/projects/topology), CSS,
+73 chiavi i18n, wiring main, test (281 verdi, axe 0), 13 commit one-file, push
+`7e48da6..343145d`, handoff aggiornato.
+
 ---
 
-## 3. Cosa è stato FATTO (Fase 1 ✅ + Fase 2/3 ✅ + Fase 4 ✅)
+## 3. Cosa è stato FATTO (Fase 1 ✅ + Fase 2/3 ✅ + Fase 4 ✅ + Fase 5 ✅)
 
-### Fase 4 ✅ — 4 nuovi calcolatori (ultimo lavoro, pushato `7afac97..f6cd764`)
+### Fase 5 ✅ — 4 viste non-calc: classes, topology, guide, projects (push `7e48da6..343145d`)
+
+Verifiche: `tsc --noEmit` 0 errori · `npm.cmd test` → **281 test / 15 file verdi** ·
+axe 0 violazioni (incluse le 4 viste nuove aperte) · `npm.cmd run build` ok
+(`index.js 122.98 kB / 34.76 gzip` + `echarts.js 493.10 kB` separato, css 21.81 kB).
+
+- **`src/state/persist.ts`** — nuovo slice `topology` in `AppState`:
+  `TopoNode {id, kind:'router'|'switch'|'pc'|'server', name, x, y}`, `TopoLink {id, from, to, label}`,
+  `TOPO_CANVAS = {width:680, height:460}` (viewBox), `normalizeState` valida id unici, kind enum,
+  coord clampate, link con estremi esistenti; **stato assente → demo** (R1/SW1/PC1/SRV1 già
+  collegati, così il canvas insegna al primo apertura), stato presente con `nodes:[]` → vuoto preservato.
+  `SCHEMA_VERSION` resta 1. `url.ts` NON serializza topology (share = solo input tool) ✓ voluto.
+- **`src/state/projects.ts`** — storage dedicato `eli6subnets_projects`: `ProjectRecord {id, name,
+  savedAt, state}`; `loadProjects()` re-normalizza ogni snapshot (scarta corrotti), `saveProjects()`,
+  `newProjectId()` (time+random, niente crypto).
+- **`src/ui/views/types.ts`** — `ViewHandle {root, refresh}` (contratto delle viste non-calc).
+- **`src/ui/views/guide.ts`** — formule (`2^(32−N)` ecc.), RFC 1918, intervalli speciali
+  (loopback/link-local/multicast/0.0.0.0/8), 3 esercizi in `<details>`, **tabella /0–/32 calcolata
+  a runtime** con `prefixToMask`/`uint32ToIp` (maschera, wildcard, totale, utilizzabili:
+  ≤/30 → −2, /31 → 2, /32 → 1). Tabelle costruite via helper locale `blockTable` (con
+  `.table-scroll`), ricostruite da `refresh()` perché gli header sono `t()`.
+- **`src/ui/views/classes.ts`** — donut ECharts (`donutOption` con quote 50/25/12,5/6,25/6,25,
+  centro `formatNumber(2^32)`) + legenda a **bottoni** `.legend-row` (`aria-pressed`, swatch
+  `seriesColor(i)` coerente col grafico) + drill-down `.classes-detail` (intervallo/maschera/
+  prefisso privato/uso + breakdown pubblico/privato/loopback con conteggi) e bottone "← Indietro".
+  Dati statici in `CLASS_DEFS` (range/numeri non traducibili in codice; solo testi in i18n).
+- **`src/ui/views/projects.ts`** — salva snapshot (`getState()`), **riapri** (`setState` con
+  lang/theme correnti preservati + callback `onOpen` → `hydrate()` di tutti i pannelli + `refresh()`
+  delle viste), rinomina inline (input+save/cancel), elimina **armed** (primo click = "Confermi?",
+  secondo elimina; timeout 3s). `refresh()` su cambio lingua. Riga dinamica → `applyTranslations(list)`
+  dopo il build (applyTranslations parte solo a mount/lang-change).
+- **`src/ui/views/topology.ts`** — editor SVG drag&drop:
+  nodi con glyph stroke (router/switch/pc/server) + label mono, colori via classe kind
+  (accent/secondary/muted/text); link = 2 linee (hit 16px trasparente + linea) + label CIDR con
+  `paint-order:stroke`; **selezione** node/link/canvas-vuoto → ispettore (rinomina live, select
+  "collega con" + bottone, etichetta link live, delete, empty-state); **drag** pointerdown su svg
+  (delegato, `closest('.topo-node')`), `setPointerCapture` con try/catch, `clientToCanvas` usa
+  `getBoundingClientRect` e in jsdom (rect 0) cade su coordinate client; move = transform live +
+  update geometria link, pointerup = `patchState`; **keyboard**: Enter/Space sul `<g tabindex=0
+  role=button aria-label>` seleziona e ripristina il focus dopo il re-render; **add** dalla toolbar
+  (nome auto R2/SW2/PC…, posizione a cascata), **clear armed** come projects; `.topo-empty` overlay
+  con `hidden` toggle (mai sopra l'SVG quando non serve).
+- **CSS**: `layout.css` `.tool-panel--wide.is-active` (una colonna); `components.css` —
+  `.view-intro/.view-subheading/.table-scroll`, guide list/exercises, classes legend/detail/sub,
+  projects save/list/row + `.btn.is-armed` pulse, topology toolbar/stage/svg/node/link/inspector/chip.
+- **main.ts** — `views: ViewHandle[]` (classes, topology, guide, projects con `hydrateAll` callback),
+  `mountSidebar(app, [...CALCULATOR_IDS, 'classes','topology','guide','projects'])`,
+  `onLangChange` refresha anche `views`.
+- **i18n** — 73 nuove chiavi ×2 (guide.×, classes.× incl. use.A–E, projects.×, topology.×,
+  empty.projects/topology, **action.save/action.cancel** — non esistevano).
+- **Test** — shell test ora **12 sidebar links/12 views**; +4 describe in `ui.test.ts`
+  (classes drill-down, guide 33+3+4 righe, projects salva/apri/rinomina/elimina-armata,
+  topology demo+keyboard select, drag pointer, add+connect+duplicate toast, clear armed);
+  a11y: nuovo `it` che apre le 4 viste e lancia axe su ciascuna (0 violazioni).
+- **13 commit one-file-per-commit** pushati `7e48da6..343145d`.
+
+### Fase 4 ✅ — 4 nuovi calcolatori (pushato `7afac97..f6cd764`)
 
 Verifiche: `tsc --noEmit` 0 errori · `npm.cmd test` → **273 test / 15 file verdi** ·
 coverage `src/calc` **98.53% lines** (soglia 90) · `npm.cmd run build` ok
@@ -258,59 +320,45 @@ Verifiche superate alla fine della Fase 1:
 
 ---
 
-## 4. Dove ero arrivato ESATTAMENTE (inizio Fase 5 — viste di riferimento)
+## 4. Prossima fase (Fase 6 — visualizzatore 32 bit + copy didattico)
 
-Fase 4 pushata (`f6cd764`). Prossimo: **Fase 5** = viste `classes`, `topology`,
-`guide`, `projects` (le `ViewId` sono già in `VIEW_IDS` e le label `nav.*` già
-nei dizionari; la sidebar le mostra appena entrate in `registered`).
+Fase 5 pushata (`343145d`). Prossimo: **Fase 6** = visualizzatore 32 bit interattivo
+nella vista `single` + rifinitura copy didattico. Poi **Fase 7** = chiusura
+(test/a11y/i18n audit, build, deploy, verifica sito) — molte cose di Fase 7 sono già
+fatte per via delle fasi precedenti, quindi Fase 7 sarà soprattutto audit+verifica.
 
-### Attenzione: le viste non-calc non sono `CalculatorId`
-- `panels: Record<CalculatorId, ToolPanel>` in `main.ts` resta **solo per i 8
-  calcolatori** (CSV/CSV import live lì).
-- Le nuove viste vanno montate a parte (es. `mountGuide(main)` che restituisce
-  il suo `<section id="view-guide" aria-labelledby="nav-guide">`) e incluse nella
-  chiamata: `mountSidebar(app, [...CALCULATOR_IDS, 'classes', 'topology', 'guide', 'projects'])`
-  — `activate()` fa il toggle `.is-active` su tutto ciò che è in `registered`.
-- Se serve l'export, `importExport.activePanel()` già ritorna `null` per le viste
-  non-calc → messaggio `export.noCsvView` (verificare al primo utilizzo).
+### Visualizzatore 32 bit (riferimento: cidr.xyz, clone in `%TEMP%\opencode\cidr.xyz` se serve)
+- Oggetto: nuovo componente `src/ui/bitViewer.ts` montato in `src/ui/tools/singleSubnet.ts`
+  (sopra o sotto il dashboard), non una vista separata.
+- Contenuto: 32 caselle bit (gruppi di 8 = ottetti), bit di rete evidenziati rispetto al
+  prefisso, bit host rimanenti; **click su un bit** → mostra posizione (bit N, valore 2^k),
+  **click su un ottetto** → decimale; riga seconda = indirizzo in binario/decimale/mask;
+  scroll orizzontale su mobile (`.table-scroll` già esiste).
+- Dati: ricalcolare da `calcSubnet` (network + prefix già validati) — niente nuova matematica;
+  `uint32ToIp`/`ipToUint32` per il round-trip. i18n per le etichette (bit/ottetto/valore).
+- Accessibilità: caselle come `<button>` o `role="button"` con `aria-label` ("Bit 12, valore 2048"),
+  non solo colore per rete/host (usa bordo + mark). axe deve restare a 0.
+- Test: `ui.test.ts` — calcolo /26 → 26 bit di rete evidenziati; click bit → info; prefix /32 e /0 edge.
 
-### Contenuto per ciascuna vista
-- **`classes`** — anello A–E di classi IPv4 con drill-down: **leggere
-  `network_planner.html` (sezione `#classes`)** che è il riferimento visivo
-  dell'utente (dati già noti: classi A/B/C/D/E, range, maschera, reti private).
-  ECharts: `PieSeriesOption` con `radius: ['45%','70%']` (donut) → usare
-  `donutOption` in `src/charts/builders.ts` o variante; click sulla fetta →
-  dettaglio sotto. Registrare `PieChart` già fatto in `src/charts/index.ts`.
-  Nessun ToolPanel: view statica + grafico montato al mount.
-- **`topology`** — editor drag&drop SVG: nodi (router/switch/pc/server) + link
-  etichettati con CIDR; **pointer events** (pointerdown/move/up su elementi SVG,
-  `setPointerCapture`), pan/zoom opzionale, palette da drag o click-per-add.
-  Stato da persistire: nuovo slice `topology: { nodes: Node[], links: Link[] }`
-  in `AppState` + `defaultState` + `normalizeState` (SCHEMA_VERSION **resta 1**,
-  campo mancante → default vuoto). ⚠: `AppState` è anche ciò che la share-URL
-  (`url.ts`) serializza — verificare che i tipi stringa/numeri restino
-  JSON-safe e che `url.ts` subsetting includa (o escluda) `topology` di proposito.
-- **`guide`** — cheat sheet statica i18n: tabella /0…/32 (prefix, maschera,
-  wildcard, indirizzi, host utilizzabili — **calcolare a runtime** con
-  `prefixToMask`/`Math.pow` invece di 33 righe di testo in i18n), classi
-  storiche, RFC 1918, formule (2^(32-p), /N block size), 3-4 esercizi con
-  soluzione in `<details>`.
-- **`projects`** — salvataggio progetti con nome: suggerimento = chiave
-  dedicata `eli6subnets_projects` in localStorage (array `{id, name, savedAt,
-  state}` — `state` = intero `AppState` già serializzabile) **invece** di
-  allargare `AppState`, così non tocca `url.ts` né `SCHEMA_VERSION`.
-  Operazioni: salva corrente, lista, riapri (`setState` + re-idrate), rinomina,
-  elimina; conferma eliminazione con `alertBlock` o toast esistente.
+### Copy didattico ("perché?" sui campi)
+- Tooltip o `<details>` compatto accanto ai campi chiave di `singleSubnet` (network/broadcast/
+  usable/class): testo breve in i18n (`hint.*`), stile `.result-note` o `title`+`aria-describedby`.
+- Verificare `export.noCsvView` sulle 4 viste non-calc (footer import/export) — già gestito in
+  `activePanel()`, controllare solo il messaggio renderizzato.
 
-### Regole sempre valide (dalla Fase 4)
+### Regole sempre valide
 - i18n: ogni chiave in **entrambi** i dizionari (`tests/i18n.test.ts` parità);
-  `applyTranslations` schiaccia i figli → `data-i18n-key` mai su elementi con
-  figli dinamici.
-- CSS-only classi dai token (`--color-*`, `--space-*`, `--radius-*`);
-  niente colori hardcodati (a11y contrast verificato da axe in 2 temi).
+  `applyTranslations` schiaccia i figli → `data-i18n-key` mai su elementi con figli dinamici;
+  righe ricostruite a runtime → `applyTranslations(list)` o `t()` al build (vedi projects.ts).
+- Viste non-calc: montate come `ViewHandle`, NON in `panels`; `mountSidebar` con spread.
+- Topology: modello = `getState().topology` (muta in place + `patchState` per persistere);
+  overlay `.topo-empty` sempre con `hidden` toggle; `clientToCanvas` con fallback jsdom.
+- CSS-only classi dai token (`--color-*`, `--space-*`, `--radius-*`); niente colori hardcodati.
 - Un file = un commit con messaggio custom, `git add <file>` mirato.
 - Verifiche obbligatorie: `.\node_modules\.bin\tsc.cmd --noEmit`,
-  `npm.cmd test` (273 test, 15 file), `npm.cmd run build`.
+  `npm.cmd test` (281 test, 15 file), `npm.cmd run build`.
+- ⚠ Suite jsdom può andare lenta in parallelo la prima volta su OneDrive (hookTimeout 10s):
+  se 3 file falliscono con "Hook timed out", **rirun** `npm.cmd test` — di norma passa.
 
 ---
 
@@ -319,18 +367,15 @@ nei dizionari; la sidebar le mostra appena entrate in `registered`).
 - [x] **Fase 1** — Design system dark-first + sidebar/router hash (186 test)
 - [x] **Fase 2+3** — ECharts + dashboard KPI/donut/treemap nei 4 tool (188 test, push `ffc6019..da66ae9`)
 - [x] **Fase 4** — Nuovi calcoli `range/overlap/ipv6/cloud` + 4 pannelli + persist
-      (**COMPLETE: 273 test / 15 file, coverage calc 98.5%, push `7afac97..f6cd764`**)
-- [ ] **Fase 5** — Nuove viste non-calc: `classes` (anello A–E ECharts con drill-down, da
-      `network_planner.html#classes`), `topology` (**editor drag&drop** con pointer events,
-      slice `topology` in `AppState` per il salvataggio), `guide` (tabella /0…/32 calcolata
-      a runtime + RFC1918 + formule + esercizi), `projects` (progetti salvati in chiave
-      localStorage dedicata `eli6subnets_projects`: salva/riapri/rinomina/elimina).
-      ⚠ viste non-calc: montate a parte, NON in `panels`; aggiungere a `mountSidebar`
-      con spread (vedi §4). ← **Siamo qui**
-- [ ] **Fase 6** — Visualizzatore 32 bit interattivo (click per bit, scroll ottetti,
-      stile cidr.xyz) nella vista single + copy didattico (tooltip "?" "perché" sui campi).
-- [ ] **Fase 7** — i18n it/en completo per tutto il nuovo, test per ogni modulo nuovo,
-      a11y axe, build, **commit one-file-per-commit**, push, deploy Pages, verifica sito.
+      (**273 test / 15 file, coverage calc 98.5%, push `7afac97..f6cd764`**)
+- [x] **Fase 5** — Viste non-calc `classes`/`topology`/`guide`/`projects`
+      (**COMPLETE: 281 test / 15 file, axe 0, push `7e48da6..343145d`**)
+- [ ] **Fase 6** — Visualizzatore 32 bit interattivo (click per bit, gruppi ottetti,
+      stile cidr.xyz) nella vista single + copy didattico (hint "?" sui campi chiave).
+      Design nel §4. ← **Siamo qui**
+- [ ] **Fase 7** — Chiusura: audit i18n (tutte le stringhe visibili in it+en), audit test
+      per ogni modulo, a11y axe, build, verifica deploy Pages. (Molto già coperto dalle
+      fasi precedenti: sarà soprattutto verifica + rifinitura.)
 
 ### Criteri di qualità
 - `tsc --noEmit` 0 errori, `npm.cmd test` tutti verdi, axe 0 violazioni, build ok,
@@ -344,7 +389,7 @@ nei dizionari; la sidebar le mostra appena entrate in `registered`).
 
 ```powershell
 npm.cmd run dev            # sviluppo
-npm.cmd test               # vitest (273 test / 15 file)
+npm.cmd test               # vitest (281 test / 15 file)
 npm.cmd test -- --coverage # + coverage src/calc (98.5% lines)
 npm.cmd run build          # tsc --noEmit && vite build
 .\node_modules\.bin\tsc.cmd --noEmit   # typecheck (npx è BLOCCATO in questa shell)
@@ -360,14 +405,16 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ## 7. GIT — stato aggiornato
 
-- Repo locale `main` **sincronizzato**: ultimo commit **`f6cd764 test: cover the four new tool views`**
-  (push verde `7afac97..f6cd764`); prima `da66ae9` (Fase 2/3). Deploy Pages aggiornato.
+- Repo locale `main` **sincronizzato**: ultimo commit **`343145d test: scan the reference and
+  planning views with axe`** (push verde `7e48da6..343145d`); prima `7e48da6` (handoff Fase 4),
+  `f6cd764` (Fase 4), `da66ae9` (Fase 2/3). Deploy Pages aggiornato.
 - **Working tree PULITA**.
-- Fase 4 committata in **21 commit one-file-per-commit** (calc+test, persist, i18n en/it,
-  icons, nav, simpleTable, 4 pannelli, main, css, test UI).
+- Fase 5 committata in **13 commit one-file-per-commit** (persist topology, projects storage,
+  views/types, 4 viste, layout.css, components.css, i18n it+en insieme, main.ts, ui.test, a11y.test).
 - Convenzione: **UN FILE = UN COMMIT**, messaggio custom, `git add <file>` mirato,
-  mai `git add -A`; i18n it/en in 2 commit separati (it con il test di parità).
-- **Prossimo passo git**: lavorare Fase 5 e committare allo stesso modo, poi push.
+  mai `git add -A`; in questa fase i18n it+en sono stati committati **insieme** (un solo
+  commit) per tenere la parità sempre verde — va bene così.
+- **Prossimo passo git**: lavorare Fase 6 e committare allo stesso modo, poi push.
 
 ---
 
@@ -375,10 +422,10 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ```
 Apri il progetto Eli6Subnets. Leggi HANDOFF-continue.md per intero: contiene lo storico
-della chat, le decisioni prese, cosa è stato fatto (Fase 1 ✅, Fase 2/3 ✅ e Fase 4 ✅
-complete, 273 test verdi, tutto pushato) e cosa manca. Verifica lo stato con git status,
-tsc --noEmit e npm.cmd test, poi prosegui dalla Fase 5 (viste classes/topology/guide/projects:
-il design è nel §4, attenzione alle viste non-calc che non stanno in `panels`),
-rispettando le convenzioni (i18n it/en, nessuna firma AI, un file = un commit, dark-first
-con accento teal + blu secondario). Non committare/pushare senza chiedermelo.
+della chat, le decisioni prese, cosa è stato fatto (Fase 1 ✅, Fase 2/3 ✅, Fase 4 ✅ e
+Fase 5 ✅ complete, 281 test verdi, tutto pushato) e cosa manca. Verifica lo stato con
+git status, tsc --noEmit e npm.cmd test, poi prosegui dalla Fase 6 (visualizzatore 32 bit
+nella vista single + copy didattico: il design è nel §4), rispettando le convenzioni
+(i18n it/en, nessuna firma AI, un file = un commit, dark-first con accento teal + blu
+secondario). Non committare/pushare senza chiedermelo.
 ```
