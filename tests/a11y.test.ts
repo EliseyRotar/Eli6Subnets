@@ -86,6 +86,14 @@ describe('accessibility', () => {
     expect(report(violations)).toBe('')
   })
 
+  it('stays clean with the reference and planning views open', async () => {
+    for (const id of ['classes', 'topology', 'guide', 'projects']) {
+      document.querySelector<HTMLAnchorElement>(`#nav-${id}`)?.click()
+      const violations = await runAxe()
+      expect(report(violations), `view ${id}`).toBe('')
+    }
+  })
+
   it('stays clean in the dark theme', async () => {
     document.documentElement.dataset['theme'] = 'dark'
     const violations = await runAxe()
