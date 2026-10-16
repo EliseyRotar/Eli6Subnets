@@ -59,6 +59,35 @@ export interface VlsmRow {
   hosts: string
 }
 
+export type TopoNodeKind = 'router' | 'switch' | 'pc' | 'server'
+
+export interface TopoNode {
+  id: string
+  kind: TopoNodeKind
+  name: string
+  /** Canvas coordinates in viewBox units. */
+  x: number
+  y: number
+}
+
+export interface TopoLink {
+  id: string
+  from: string
+  to: string
+  /** Optional CIDR or short label drawn along the link. */
+  label: string
+}
+
+export interface TopologyState {
+  nodes: TopoNode[]
+  links: TopoLink[]
+}
+
+/** Topology canvas size in viewBox units; nodes are clamped inside it. */
+export const TOPO_CANVAS = { width: 680, height: 460 } as const
+
+const TOPO_KINDS: TopoNodeKind[] = ['router', 'switch', 'pc', 'server']
+
 export interface AppState {
   version:    typeof SCHEMA_VERSION
   activeView: ViewId
@@ -78,6 +107,7 @@ export interface AppState {
     interfaceName: string
     nextHop:       string
   }
+  topology: TopologyState
 }
 
 export function defaultState(): AppState {
@@ -99,6 +129,21 @@ export function defaultState(): AppState {
     cisco: {
       interfaceName: '',
       nextHop:       '',
+    },
+    // A small worked example so the canvas teaches on first open; the user
+    // can clear it from the toolbar.
+    topology: {
+      nodes: [
+        { id: 'n1', kind: 'router', name: 'R1',  x: 340, y: 70 },
+        { id: 'n2', kind: 'switch', name: 'SW1', x: 340, y: 210 },
+        { id: 'n3', kind: 'pc',     name: 'PC1', x: 200, y: 350 },
+        { id: 'n4', kind: 'server', name: 'SRV1', x: 480, y: 350 },
+      ],
+      links: [
+        { id: 'l1', from: 'n1', to: 'n2', label: '192.168.1.0/30' },
+        { id: 'l2', from: 'n2', to: 'n3', label: '192.168.1.0/24' },
+        { id: 'l3', from: 'n2', to: 'n4', label: '192.168.1.0/24' },
+      ],
     },
   }
 }
@@ -129,6 +174,52 @@ function vlsmRows(value: unknown): VlsmRow[] {
   return rows
 }
 
+function num(value: unknown, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function topoNodes(value: unknown): TopoNode[] {
+  if (!Array.isArray(value)) return []
+  const nodes: TopoNode[] = []
+  const seen = new Set<string>()
+  for (const item of value) {
+    if (!isRecord(item)) continue
+    const id   = str(item['id'], '')
+    const kind = str(item['kind'], '')
+    if (id === '' || seen.has(id) || !TOPO_KINDS.includes(kind as TopoNodeKind)) continue
+    seen.add(id)
+    nodes.push({
+      id,
+      kind: kind as TopoNodeKind,
+      name: str(item['name'], '').slice(0, 40),
+      x: clamp(num(item['x'], 0), 0, TOPO_CANVAS.width),
+      y: clamp(num(item['y'], 0), 0, TOPO_CANVAS.height),
+    })
+  }
+  return nodes
+}
+
+function topoLinks(value: unknown, nodeIds: ReadonlySet<string>): TopoLink[] {
+  if (!Array.isArray(value)) return []
+  const links: TopoLink[] = []
+  const seen = new Set<string>()
+  for (const item of value) {
+    if (!isRecord(item)) continue
+    const id   = str(item['id'], '')
+    const from = str(item['from'], '')
+    const to   = str(item['to'], '')
+    if (id === '' || seen.has(id)) continue
+    if (!nodeIds.has(from) || !nodeIds.has(to) || from === to) continue
+    seen.add(id)
+    links.push({ id, from, to, label: str(item['label'], '').slice(0, 40) })
+  }
+  return links
+}
+
 /**
  * Coerce an arbitrary parsed value into a complete AppState.
  * Returns null when the blob is unusable (wrong type or schema version).
@@ -147,6 +238,17 @@ export function normalizeState(raw: unknown): AppState | null {
   const theme      = str(raw['theme'], base.theme)
   const lang       = str(raw['lang'], base.lang)
   const cisco      = isRecord(raw['cisco']) ? raw['cisco'] : {}
+
+  // States saved before the topology view existed keep the worked example;
+  // states that carry the slice honour it even when the canvas is empty.
+  const topo = isRecord(raw['topology']) ? raw['topology'] : null
+  const topology: TopologyState = topo === null
+    ? base.topology
+    : (() => {
+        const nodes = topoNodes(topo['nodes'])
+        const nodeIds = new Set(nodes.map(node => node.id))
+        return { nodes, links: topoLinks(topo['links'], nodeIds) }
+      })()
 
   const single   = isRecord(tools['single'])   ? tools['single']   : {}
   const vlsm     = isRecord(tools['vlsm'])     ? tools['vlsm']     : {}
@@ -190,6 +292,7 @@ export function normalizeState(raw: unknown): AppState | null {
       interfaceName: str(cisco['interfaceName'], base.cisco.interfaceName),
       nextHop:       str(cisco['nextHop'], base.cisco.nextHop),
     },
+    topology,
   }
 }
 
