@@ -27,11 +27,11 @@ function type(selector: string, value: string): void {
 }
 
 describe('app shell', () => {
-  it('mounts sidebar, topbar, eight views and footer', () => {
+  it('mounts sidebar, topbar, twelve views and footer', () => {
     expect(document.querySelector('.sidebar')).not.toBeNull()
     expect(document.querySelector('.topbar')).not.toBeNull()
-    expect(document.querySelectorAll('.sidebar__link')).toHaveLength(8)
-    for (const id of ['single', 'vlsm', 'split', 'supernet', 'range', 'overlap', 'ipv6', 'cloud']) {
+    expect(document.querySelectorAll('.sidebar__link')).toHaveLength(12)
+    for (const id of ['single', 'vlsm', 'split', 'supernet', 'range', 'overlap', 'ipv6', 'cloud', 'topology', 'classes', 'guide', 'projects']) {
       expect(document.querySelector(`#view-${id}`)).not.toBeNull()
     }
     expect(document.querySelector('.footer')).not.toBeNull()
@@ -281,6 +281,142 @@ describe('cloud tool', () => {
     const view = q('#view-cloud')
     expect(view.textContent).toContain('Gateway Azure')
     expect(view.textContent).toContain('10.0.1.5')
+  })
+})
+
+describe('classes view', () => {
+  it('renders the donut legend and drills into a class', () => {
+    q<HTMLAnchorElement>('#nav-classes').click()
+    const view = q('#view-classes')
+    expect(view.classList.contains('is-active')).toBe(true)
+    expect(view.querySelectorAll('.legend-row')).toHaveLength(5)
+    expect(view.textContent).toContain('0.0.0.0 – 127.255.255.255')
+
+    q<HTMLButtonElement>('#view-classes .legend-row[data-class="A"]').click()
+    const detail = q('#view-classes .classes-detail')
+    expect(detail.textContent).toContain('10.0.0.0/8')
+    expect(detail.textContent).toContain('127.0.0.0/8')
+    expect(detail.textContent).toContain('Loopback')
+
+    q<HTMLButtonElement>('#view-classes .js-classes-back').click()
+    expect(document.querySelector('#view-classes .classes-detail')).toBeNull()
+  })
+})
+
+describe('guide view', () => {
+  it('lists every prefix from /0 to /32', () => {
+    q<HTMLAnchorElement>('#nav-guide').click()
+    const view = q('#view-guide')
+    expect(view.classList.contains('is-active')).toBe(true)
+    // 33 prefix rows plus the three RFC 1918 rows and the four special ones.
+    expect(view.querySelectorAll('.js-guide-prefixes tbody tr')).toHaveLength(33)
+    expect(view.querySelectorAll('.js-guide-private tbody tr')).toHaveLength(3)
+    expect(view.querySelectorAll('.js-guide-special tbody tr')).toHaveLength(4)
+    expect(view.textContent).toContain('255.255.255.0')
+    expect(view.textContent).toContain('10.0.0.0/8')
+    expect(view.textContent).toContain('Reti private (RFC 1918)')
+  })
+})
+
+describe('projects view', () => {
+  it('saves, renames, reopens and deletes a project', () => {
+    q<HTMLAnchorElement>('#nav-projects').click()
+    expect(q('#view-projects .empty-state')).not.toBeNull()
+
+    // Saving requires a name.
+    submit('#projects-form')
+    expect(q('#projects-name-error').textContent).not.toBe('')
+
+    // Change a tool input so reopening is observable later.
+    type('#single-cidr', '172.16.5.0/24')
+    submit('#single-form')
+
+    type('#projects-name', 'Lab demo')
+    submit('#projects-form')
+    expect(document.querySelectorAll('#view-projects .project-row')).toHaveLength(1)
+    expect(q('#view-projects .project-row__name').textContent).toBe('Lab demo')
+
+    // Reopen: the tool inputs come back.
+    type('#single-cidr', '10.0.0.0/8')
+    submit('#single-form')
+    q<HTMLButtonElement>('#view-projects [data-action="open"]').click()
+    expect(q<HTMLInputElement>('#single-cidr').value).toBe('172.16.5.0/24')
+
+    // Rename inline.
+    q<HTMLButtonElement>('#view-projects [data-action="rename"]').click()
+    const rename = q<HTMLInputElement>('#view-projects .project-row__rename')
+    rename.value = 'Lab 2'
+    q<HTMLButtonElement>('#view-projects [data-action="rename-save"]').click()
+    expect(q('#view-projects .project-row__name').textContent).toBe('Lab 2')
+
+    // Deletion is armed: the first click only asks for confirmation.
+    q<HTMLButtonElement>('#view-projects [data-action="delete"]').click()
+    expect(document.querySelectorAll('#view-projects .project-row')).toHaveLength(1)
+    expect(q('#view-projects [data-action="delete"]').textContent).toBe('Confermi?')
+    q<HTMLButtonElement>('#view-projects [data-action="delete"]').click()
+    expect(document.querySelector('#view-projects .project-row')).toBeNull()
+  })
+})
+
+describe('topology view', () => {
+  it('renders the demo canvas and selects a node with the keyboard', () => {
+    q<HTMLAnchorElement>('#nav-topology').click()
+    const view = q('#view-topology')
+    expect(view.classList.contains('is-active')).toBe(true)
+    expect(view.querySelectorAll('.topo-node')).toHaveLength(4)
+    expect(view.querySelectorAll('.topo-link')).toHaveLength(3)
+
+    view.querySelector<SVGElement>('.topo-node')
+      ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    expect(q<HTMLInputElement>('#view-topology #topo-node-name').value).toBe('R1')
+  })
+
+  it('drags a node with pointer events', () => {
+    const view = q('#view-topology')
+    const svg = q<SVGSVGElement>('#view-topology .js-topo-svg')
+    const node = view.querySelector<SVGElement>('.topo-node')
+    expect(node).not.toBeNull()
+    const before = node?.getAttribute('transform')
+
+    node?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100 }))
+    svg.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 150, clientY: 140 }))
+    svg.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }))
+
+    expect(view.querySelector('.topo-node')?.getAttribute('transform')).not.toBe(before)
+  })
+
+  it('adds a device, links it and reports duplicates', () => {
+    const view = q('#view-topology')
+    q<HTMLButtonElement>('#view-topology [data-add="router"]').click()
+    expect(view.querySelectorAll('.topo-node')).toHaveLength(5)
+    expect(view.textContent).toContain('R2')
+
+    // Select the new router (last node) and connect it to PC1.
+    const last = view.querySelectorAll<SVGElement>('.topo-node')
+    last[last.length - 1]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+    const target = q<HTMLSelectElement>('#view-topology #topo-connect-target')
+    target.value = 'n3'
+    q<HTMLButtonElement>('#view-topology .js-topo-connect').click()
+    expect(view.querySelectorAll('.topo-link')).toHaveLength(4)
+
+    // Connecting the same pair again is refused with a toast. The inspector
+    // re-rendered after the first connect, so the select starts fresh.
+    q<HTMLSelectElement>('#view-topology #topo-connect-target').value = 'n3'
+    q<HTMLButtonElement>('#view-topology .js-topo-connect').click()
+    expect(view.querySelectorAll('.topo-link')).toHaveLength(4)
+    expect(q('.toast').textContent).toContain('già collegati')
+  })
+
+  it('clears the canvas with the armed toolbar button', () => {
+    const view = q('#view-topology')
+    // First click only arms the button: the canvas stays untouched.
+    q<HTMLButtonElement>('#view-topology .js-topo-clear').click()
+    expect(view.querySelectorAll('.topo-node')).toHaveLength(5)
+
+    q<HTMLButtonElement>('#view-topology .js-topo-clear').click()
+    expect(view.querySelectorAll('.topo-node')).toHaveLength(0)
+    expect(view.querySelector('.topo-empty .empty-state')).not.toBeNull()
+    expect(q<SVGSVGElement>('#view-topology .js-topo-svg').hasAttribute('hidden')).toBe(true)
   })
 })
 
