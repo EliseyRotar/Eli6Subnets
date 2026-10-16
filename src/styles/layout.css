@@ -193,6 +193,11 @@
   align-items: start;
 }
 
+/* Full-width views without the input/results split (guide, classes, …) */
+.tool-panel--wide.is-active {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .tool-panel__input {
   display: flex;
   flex-direction: column;
