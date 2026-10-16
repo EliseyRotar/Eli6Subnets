@@ -36,6 +36,11 @@ import { mountSingleSubnet } from './ui/tools/singleSubnet'
 import { mountSupernet } from './ui/tools/supernet'
 import { mountVlsm } from './ui/tools/vlsm'
 import type { ToolPanel } from './ui/tools/types'
+import { mountClasses } from './ui/views/classes'
+import { mountGuide } from './ui/views/guide'
+import { mountProjects } from './ui/views/projects'
+import { mountTopology } from './ui/views/topology'
+import type { ViewHandle } from './ui/views/types'
 import { qs } from './ui/dom'
 
 /**
@@ -82,11 +87,30 @@ const panels: Record<CalculatorId, ToolPanel> = {
   cloud:    mountCloud(main),
 }
 
+  // Reference and planning views (classes, topology, guide, projects) are
+  // not calculators — no inputs persisted under `tools`, no CSV — so they
+  // mount separately but join the same sidebar registration below.
+  const hydrateAll = (): void => {
+    for (const panel of Object.values(panels)) panel.hydrate(getState())
+    for (const view of views) view.refresh()
+  }
+
+  const views: ViewHandle[] = [
+    mountClasses(main),
+    mountTopology(main),
+    mountGuide(main),
+    mountProjects(main, hydrateAll),
+  ]
+
   mountFooter(shell, panels)
 
   // The sidebar last: it resolves `#/view`, activates the panel and wires
-  // the mobile drawer trigger living in the topbar.
-  const sidebar = mountSidebar(app, CALCULATOR_IDS)
+  // the mobile drawer trigger living in the topbar. Calculators first,
+  // then the static views — sidebar order itself comes from nav.ts.
+  const sidebar = mountSidebar(app, [
+    ...CALCULATOR_IDS,
+    'classes', 'topology', 'guide', 'projects',
+  ])
   qs('.topbar').addEventListener('click', event => {
     if ((event.target as Element).closest('#menu-toggle')) sidebar.toggleDrawer()
   })
@@ -119,6 +143,7 @@ const panels: Record<CalculatorId, ToolPanel> = {
   onLangChange(lang => {
     if (getState().lang !== lang) patchState({ lang })
     for (const panel of Object.values(panels)) panel.refresh()
+    for (const view of views) view.refresh()
     topbar.refresh()
     scheduleRefresh()
   })
