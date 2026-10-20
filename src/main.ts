@@ -38,6 +38,7 @@ import { mountVlsm } from './ui/tools/vlsm'
 import type { ToolPanel } from './ui/tools/types'
 import { mountClasses } from './ui/views/classes'
 import { mountGuide } from './ui/views/guide'
+import { mountHome } from './ui/views/home'
 import { mountProjects } from './ui/views/projects'
 import { mountTopology } from './ui/views/topology'
 import type { ViewHandle } from './ui/views/types'
@@ -96,6 +97,7 @@ const panels: Record<CalculatorId, ToolPanel> = {
   }
 
   const views: ViewHandle[] = [
+    mountHome(main),
     mountClasses(main),
     mountTopology(main),
     mountGuide(main),
@@ -108,6 +110,7 @@ const panels: Record<CalculatorId, ToolPanel> = {
   // the mobile drawer trigger living in the topbar. Calculators first,
   // then the static views — sidebar order itself comes from nav.ts.
   const sidebar = mountSidebar(app, [
+    'home',
     ...CALCULATOR_IDS,
     'classes', 'topology', 'guide', 'projects',
   ])
