@@ -105,9 +105,35 @@ persist topology + projects storage, 4 viste (guide/classes/projects/topology), 
 del risultato, 13 chiavi i18n, CSS, 3 test nuovi (**284 verdi**, axe 0), 6 commit
 one-file `0348083..a1e9ad5`.
 
+**(Sessione 20/10/2026 — stessa sessione, proseguimento)** → eseguita **Fase 7 (chiusura)**:
+audit i18n pulito, nuovo test `footer export guard` per `export.noCsvView`, coverage
+`src/calc` 98.53% (**285 test**), fix timeout axe 4-viste (`20_000`), build ok, deploy
+Pages verificato (`39383018804` success). **Progetto completo: 7/7 fasi.**
+
 ---
 
-## 3. Cosa è stato FATTO (Fase 1 ✅ + Fase 2/3 ✅ + Fase 4 ✅ + Fase 5 ✅ + Fase 6 ✅)
+## 3. Cosa è stato FATTO (Fase 1 ✅ + Fase 2/3 ✅ + Fase 4 ✅ + Fase 5 ✅ + Fase 6 ✅ + Fase 7 ✅)
+
+### Fase 7 ✅ — chiusura: audit + verifica (commit `bc453b2`, `bf2b9d1`)
+
+- **Audit i18n** — grep su `src/**/*.ts` per `aria-label="…"`/`title=`/`textContent=` letterali
+  e parole ingrate: **pulito**; tutta la copy passa da `t()`/JSON. Placeholder tecnici neutri
+  (`192.168.1.0/24`, `GigabitEthernet0/1`, `2001:db8::/64`, `VLAN10`) e brand `Eli6Subnets`
+  non traducibili. `network_planner.html` non referenziato da `index.html` (riferimento
+  standalone, proprietà dell'utente). Meta description IT in `index.html` = SEO, non UI.
+- **`export.noCsvView`** — codice verificato (`activePanel()` in `importExport.ts` torna null
+  per le viste non-calc → `showError(t('export.noCsvView'))` su export E import) + **nuovo
+  test** (`ui.test.ts` describe `footer export guard`): nav → guide, click export-csv →
+  alert visibile col testo IT, dismiss → hidden.
+- **Audit coverage** — `npm.cmd test -- --coverage`: **285/285 verdi**, `src/calc` **98.53%
+  lines** (soglia 90; funcs 100%).
+- **⚠ Fix timeout axe**: il test "stays clean with the reference and planning views open"
+  (4 scansioni seriali) sotto `--coverage` supera il default 5s (baseline ~4.6s) e casca,
+  facendo fallire a catena il dark-theme ("Axe is already running"). → timeout esplicito
+  `20_000` come terzo argomento di `it()` in `a11y.test.ts`. Ora verde anche con coverage.
+- **Deploy Pages** — run `39383018804` **success** (push Fase 6/handoff, 2026-10-20).
+- `tsc --noEmit` 0 errori · `npm.cmd run build` ok (`index.js 127.18 kB / 35.97 gzip`,
+  css 24.59 kB, `echarts.js` separato 493.10 kB).
 
 ### Fase 6 ✅ — visualizzatore 32 bit + copy didattico (commit `0348083..a1e9ad5`)
 
@@ -358,20 +384,19 @@ Verifiche superate alla fine della Fase 1:
 
 ---
 
-## 4. Prossima fase (Fase 7 — chiusura: audit + verifica)
+## 4. Fase 7 ✅ — chiusura: audit + verifica (COMPLETA)
 
-Fase 6 pushata. Prossimo: **Fase 7** = chiusura. Molte cose sono già coperte dalle fasi
-precedenti (test, axe, parità i18n, build), quindi sarà soprattutto audit + verifica:
+Tutte le 7 fasi sono finite. Verifiche finali:
 
-- [ ] **Audit i18n**: grep per testi hardcodati in `src/ui/**` (fuori dalle chiavi `t()`/JSON):
-      ogni stringa visibile deve stare in it **e** en (parità già verde col test).
-- [ ] **`export.noCsvView`** sulle 4 viste non-calc (footer import/export): già gestito in
-      `activePanel()`, controllare solo il messaggio renderizzato quando non c'è CSV.
-- [ ] Rivedere la copertura test per ogni modulo (calc già 98.5% lines; ui/a11y verdi).
-- [ ] `npm.cmd test` (284) + axe 0 + `npm.cmd run build`; rifinitura copy se emergono buchi.
-- [ ] **Verifica deploy Pages**: push → workflow → sito aggiornato (`eliseyrotar.github.io/Eli6Subnets/`).
+- [x] **Audit i18n** — grep testi hardcodati in `src/ui/**`: pulito; parità it/en col test.
+- [x] **`export.noCsvView`** — `activePanel()` null sulle viste non-calc → messaggio su
+      export/import; coperto dal test `footer export guard`.
+- [x] **Audit test** — `--coverage`: 285/285, `src/calc` 98.53% lines / 100% funcs.
+- [x] **axe 0 violazioni** (5 scenari, incluso dark theme) + `tsc --noEmit` + build ok.
+- [x] **Deploy Pages** — workflow `Deploy to GitHub Pages` success (ultimo run verificato
+      con `gh run list`).
 
-### Regole sempre valide
+### Regole sempre valide (per chi riprenderà il progetto)
 - i18n: ogni chiave in **entrambi** i dizionari (`tests/i18n.test.ts` parità);
   `applyTranslations` schiaccia i figli → `data-i18n-key` mai su elementi con figli dinamici;
   righe ricostruite a runtime → `applyTranslations(list)` o `t()` al build (vedi projects.ts,
@@ -382,7 +407,7 @@ precedenti (test, axe, parità i18n, build), quindi sarà soprattutto audit + ve
 - CSS-only classi dai token (`--color-*`, `--space-*`, `--radius-*`); niente colori hardcodati.
 - Un file = un commit con messaggio custom, `git add <file>` mirato.
 - Verifiche obbligatorie: `.\node_modules\.bin\tsc.cmd --noEmit`,
-  `npm.cmd test` (284 test, 15 file), `npm.cmd run build`.
+  `npm.cmd test` (285 test, 15 file), `npm.cmd run build`.
 - ⚠ Suite jsdom può andare lenta in parallelo la prima volta su OneDrive (hookTimeout 10s):
   se 3 file falliscono con "Hook timed out", **rirun** `npm.cmd test` — di norma passa.
 
@@ -398,10 +423,9 @@ precedenti (test, axe, parità i18n, build), quindi sarà soprattutto audit + ve
       (**COMPLETE: 281 test / 15 file, axe 0, push `7e48da6..343145d`**)
 - [x] **Fase 6** — Visualizzatore 32 bit interattivo + copy didattico (hint "?" sui campi)
       (**COMPLETE: 284 test / 15 file, axe 0, commit `0348083..a1e9ad5`**)
-- [ ] **Fase 7** — Chiusura: audit i18n (tutte le stringhe visibili in it+en), verifica
-      `export.noCsvView` sulle viste non-calc, audit test per ogni modulo, a11y axe,
-      build, verifica deploy Pages. (Molto già coperto: sarà soprattutto verifica.)
-      ← **Siamo qui**
+- [x] **Fase 7** — Chiusura: audit i18n, `export.noCsvView` + test, coverage 98.5%,
+      axe 0, build, deploy Pages verificato. (**COMPLETE: 285 test / 15 file,
+      commit `bc453b2` + `bf2b9d1`**) ← **PROGETTO COMPLETO (7/7 fasi)**
 
 ### Criteri di qualità
 - `tsc --noEmit` 0 errori, `npm.cmd test` tutti verdi, axe 0 violazioni, build ok,
@@ -415,7 +439,7 @@ precedenti (test, axe, parità i18n, build), quindi sarà soprattutto audit + ve
 
 ```powershell
 npm.cmd run dev            # sviluppo
-npm.cmd test               # vitest (284 test / 15 file)
+npm.cmd test               # vitest (285 test / 15 file)
 npm.cmd test -- --coverage # + coverage src/calc (98.5% lines)
 npm.cmd run build          # tsc --noEmit && vite build
 .\node_modules\.bin\tsc.cmd --noEmit   # typecheck (npx è BLOCCATO in questa shell)
@@ -431,16 +455,16 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ## 7. GIT — stato aggiornato
 
-- Repo locale `main`: Fase 6 committata in **6 commit one-file-per-commit**
-  (`0348083` bitViewer → `95539f0` singleSubnet → `0bd5c72` subnetView → `2e807fc` i18n
-  it+en insieme → `4aa7e2d` components.css → `a1e9ad5` ui.test), poi questo handoff.
-  Storico: `74f8969` (handoff Fase 5), `343145d` (Fase 5 axe), `7e48da6..343145d` (Fase 5),
+- Repo locale `main` aggiornato con la **Fase 7**: `bc453b2` test guard CSV export →
+  `bf2b9d1` test timeout axe → questo handoff, poi push (deploy automatico Pages).
+  Storico recente: `3bba528` (handoff Fase 6), `0348083..a1e9ad5` (Fase 6, 6 commit
+  one-file), `74f8969` (handoff Fase 5), `343145d` (Fase 5 axe), `7e48da6..343145d` (Fase 5),
   `f6cd764` (Fase 4), `da66ae9` (Fase 2/3).
-- **Working tree PULITA** (verificata dopo i commit).
+- **Working tree PULITA** dopo il commit dell'handoff.
 - Convenzione invariata: **UN FILE = UN COMMIT**, messaggio custom, `git add <file>` mirato,
   mai `git add -A`; i18n it+en committati **insieme** per tenere la parità verde.
-- **Prossimo passo git**: verificare `git status`/`git log`, lavorare Fase 7 (audit) e
-  committare allo stesso modo, poi push.
+- **Prossimo passo git**: nessuna fase aperta — tutte e 7 complete e pushate. Eventuale
+  lavoro futuro = nuova fase, stesso schema (un file = un commit, poi push).
 
 ---
 
@@ -448,10 +472,10 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ```
 Apri il progetto Eli6Subnets. Leggi HANDOFF-continue.md per intero: contiene lo storico
-della chat, le decisioni prese, cosa è stato fatto (Fase 1 ✅, Fase 2/3 ✅, Fase 4 ✅,
-Fase 5 ✅ e Fase 6 ✅ complete, 284 test verdi, tutto pushato) e cosa manca. Verifica lo stato con
-git status, tsc --noEmit e npm.cmd test, poi prosegui dalla Fase 7 (chiusura: audit i18n,
-verifica export.noCsvView sulle viste non-calc, audit test, deploy Pages — il checklist è
-nel §4), rispettando le convenzioni (i18n it/en, nessuna firma AI, un file = un commit,
-dark-first con accento teal + blu secondario). Non committare/pushare senza chiedermelo.
+della chat, le decisioni prese e la verifica che TUTTE E 7 le fasi sono complete
+(285 test verdi, axe 0, coverage calc 98.5%, build ok, deploy Pages verificato, tutto
+pushato). Verifica lo stato con git status, tsc --noEmit e npm.cmd test. Se ti chiedo
+nuove funzionalità, trattale come una NUOVA fase seguendo le convenzioni nel §4 (i18n
+it/en con parità, nessuna firma AI, un file = un commit con messaggio custom, dark-first
+con accento teal + blu secondario, CSS dai token). Non committare/pushare senza chiedermelo.
 ```
