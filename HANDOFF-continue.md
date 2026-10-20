@@ -100,9 +100,47 @@ persist topology + projects storage, 4 viste (guide/classes/projects/topology), 
 73 chiavi i18n, wiring main, test (281 verdi, axe 0), 13 commit one-file, push
 `7e48da6..343145d`, handoff aggiornato.
 
+**(Sessione 20/10/2026 — ripresa)** Utente: "continue" → eseguita **Fase 6 per intero**:
+`bitViewer` 32 bit interattivo montato nella vista `single`, hint "?" didattici sui campi
+del risultato, 13 chiavi i18n, CSS, 3 test nuovi (**284 verdi**, axe 0), 6 commit
+one-file `0348083..a1e9ad5`.
+
 ---
 
-## 3. Cosa è stato FATTO (Fase 1 ✅ + Fase 2/3 ✅ + Fase 4 ✅ + Fase 5 ✅)
+## 3. Cosa è stato FATTO (Fase 1 ✅ + Fase 2/3 ✅ + Fase 4 ✅ + Fase 5 ✅ + Fase 6 ✅)
+
+### Fase 6 ✅ — visualizzatore 32 bit + copy didattico (commit `0348083..a1e9ad5`)
+
+Verifiche: `tsc --noEmit` 0 errori · `npm.cmd test` → **284 test / 15 file verdi** ·
+axe 0 violazioni · `npm.cmd run build` ok (`index.js 127.18 kB / 35.97 gzip` +
+`echarts.js 493.10 kB` separato, css 24.59 kB).
+
+- **`src/ui/bitViewer.ts`** (NUOVO) — `bitViewer(info: SubnetInfo): HTMLElement`: card con
+  h3 `<cidr> — I 32 bit…`, legenda swatch (rete/accent, host/border-strong), 4 gruppi ottetto
+  (`bit-octet-row` dentro `.table-scroll` → scroll mobile); ogni bit = `<button class="bit
+  bit--network|bit--host">` con testo 0/1 (bit dell'**indirizzo di rete**, `ipToUint32`), aria-label
+  = `t('bits.bitInfo', indice, ottetto, esponente unicode, valore, ruolo)`; primo bit host =
+  `is-boundary` (mark blu, solo 0<prefix<32); bottone decimale per ottetto (`bit-octet__dec`,
+  aria-label = `t('bits.octetInfo', …, binario 8 cifre)`); click bit/ottetto → aggiorna
+  `<p role="status">` (init `t('bits.hint')`). Esponenti con Unicode superscript, niente matematica nuova.
+- **`src/ui/tools/singleSubnet.ts`** — `render()` monta `bitViewer(lastInfo)` tra
+  `singleDashboard` e `subnetSection` (ricostruito a ogni render → `t()` al build basta).
+- **`src/ui/subnetView.ts`** — `row(label, value, primary?, hintKey?)` opzionale; `subnetFields`
+  passa `hint.*` su 7 righe (network, broadcast, mask, wildcard, firstHost, total, usable).
+  Hint = `<span class="field-hint">` con `<button class="field-hint__btn" aria-label="{hint}">?`
+  + `<span class="field-hint__bubble" aria-hidden>`; visibilità **solo CSS** (`:hover`,
+  `:focus-visible + bubble`) — nessun JS, **nessun id** (subnetSection è duplicato in split →
+  id multipli vietati). L'aria-label sul button porta il testo completo → funziona anche senza hover.
+- **i18n** — 13 chiavi ×2: `hint.network|broadcast|mask|wildcard|hostRange|total|usable`,
+  `bits.title|hint|network|host|bitInfo|octetInfo`.
+- **CSS** (`components.css`) — blocco hint (bubble assoluta max-width 16rem, shadow con fallback)
+  + blocco viewer (`.bit` 1.7rem grid, `.bit--network` accent-subtle/border/accent/700,
+  `.bit.is-boundary` box-shadow blu, `.bit-viewer__info` min-height anti-layout-jump).
+- **Test** — `ui.test.ts` describe `bit viewer` (3 it): /26 → 32 bit / 26 rete / 6 host / 4 ottetti /
+  7 hint / boundary al bit 26 e non al 25; click bit 0 → "Bit 0" + 2.147.483.648 + "bit di rete",
+  click ottetto 0 → 192 + 11000000; /0 → 0 bit rete, /32 → 32 bit rete.
+- **6 commit one-file** `0348083..a1e9ad5` (bitViewer, singleSubnet, subnetView, i18n it+en
+  insieme, components.css, ui.test).
 
 ### Fase 5 ✅ — 4 viste non-calc: classes, topology, guide, projects (push `7e48da6..343145d`)
 
@@ -320,43 +358,31 @@ Verifiche superate alla fine della Fase 1:
 
 ---
 
-## 4. Prossima fase (Fase 6 — visualizzatore 32 bit + copy didattico)
+## 4. Prossima fase (Fase 7 — chiusura: audit + verifica)
 
-Fase 5 pushata (`343145d`). Prossimo: **Fase 6** = visualizzatore 32 bit interattivo
-nella vista `single` + rifinitura copy didattico. Poi **Fase 7** = chiusura
-(test/a11y/i18n audit, build, deploy, verifica sito) — molte cose di Fase 7 sono già
-fatte per via delle fasi precedenti, quindi Fase 7 sarà soprattutto audit+verifica.
+Fase 6 pushata. Prossimo: **Fase 7** = chiusura. Molte cose sono già coperte dalle fasi
+precedenti (test, axe, parità i18n, build), quindi sarà soprattutto audit + verifica:
 
-### Visualizzatore 32 bit (riferimento: cidr.xyz, clone in `%TEMP%\opencode\cidr.xyz` se serve)
-- Oggetto: nuovo componente `src/ui/bitViewer.ts` montato in `src/ui/tools/singleSubnet.ts`
-  (sopra o sotto il dashboard), non una vista separata.
-- Contenuto: 32 caselle bit (gruppi di 8 = ottetti), bit di rete evidenziati rispetto al
-  prefisso, bit host rimanenti; **click su un bit** → mostra posizione (bit N, valore 2^k),
-  **click su un ottetto** → decimale; riga seconda = indirizzo in binario/decimale/mask;
-  scroll orizzontale su mobile (`.table-scroll` già esiste).
-- Dati: ricalcolare da `calcSubnet` (network + prefix già validati) — niente nuova matematica;
-  `uint32ToIp`/`ipToUint32` per il round-trip. i18n per le etichette (bit/ottetto/valore).
-- Accessibilità: caselle come `<button>` o `role="button"` con `aria-label` ("Bit 12, valore 2048"),
-  non solo colore per rete/host (usa bordo + mark). axe deve restare a 0.
-- Test: `ui.test.ts` — calcolo /26 → 26 bit di rete evidenziati; click bit → info; prefix /32 e /0 edge.
-
-### Copy didattico ("perché?" sui campi)
-- Tooltip o `<details>` compatto accanto ai campi chiave di `singleSubnet` (network/broadcast/
-  usable/class): testo breve in i18n (`hint.*`), stile `.result-note` o `title`+`aria-describedby`.
-- Verificare `export.noCsvView` sulle 4 viste non-calc (footer import/export) — già gestito in
-  `activePanel()`, controllare solo il messaggio renderizzato.
+- [ ] **Audit i18n**: grep per testi hardcodati in `src/ui/**` (fuori dalle chiavi `t()`/JSON):
+      ogni stringa visibile deve stare in it **e** en (parità già verde col test).
+- [ ] **`export.noCsvView`** sulle 4 viste non-calc (footer import/export): già gestito in
+      `activePanel()`, controllare solo il messaggio renderizzato quando non c'è CSV.
+- [ ] Rivedere la copertura test per ogni modulo (calc già 98.5% lines; ui/a11y verdi).
+- [ ] `npm.cmd test` (284) + axe 0 + `npm.cmd run build`; rifinitura copy se emergono buchi.
+- [ ] **Verifica deploy Pages**: push → workflow → sito aggiornato (`eliseyrotar.github.io/Eli6Subnets/`).
 
 ### Regole sempre valide
 - i18n: ogni chiave in **entrambi** i dizionari (`tests/i18n.test.ts` parità);
   `applyTranslations` schiaccia i figli → `data-i18n-key` mai su elementi con figli dinamici;
-  righe ricostruite a runtime → `applyTranslations(list)` o `t()` al build (vedi projects.ts).
+  righe ricostruite a runtime → `applyTranslations(list)` o `t()` al build (vedi projects.ts,
+  bitViewer.ts).
 - Viste non-calc: montate come `ViewHandle`, NON in `panels`; `mountSidebar` con spread.
 - Topology: modello = `getState().topology` (muta in place + `patchState` per persistere);
   overlay `.topo-empty` sempre con `hidden` toggle; `clientToCanvas` con fallback jsdom.
 - CSS-only classi dai token (`--color-*`, `--space-*`, `--radius-*`); niente colori hardcodati.
 - Un file = un commit con messaggio custom, `git add <file>` mirato.
 - Verifiche obbligatorie: `.\node_modules\.bin\tsc.cmd --noEmit`,
-  `npm.cmd test` (281 test, 15 file), `npm.cmd run build`.
+  `npm.cmd test` (284 test, 15 file), `npm.cmd run build`.
 - ⚠ Suite jsdom può andare lenta in parallelo la prima volta su OneDrive (hookTimeout 10s):
   se 3 file falliscono con "Hook timed out", **rirun** `npm.cmd test` — di norma passa.
 
@@ -370,12 +396,12 @@ fatte per via delle fasi precedenti, quindi Fase 7 sarà soprattutto audit+verif
       (**273 test / 15 file, coverage calc 98.5%, push `7afac97..f6cd764`**)
 - [x] **Fase 5** — Viste non-calc `classes`/`topology`/`guide`/`projects`
       (**COMPLETE: 281 test / 15 file, axe 0, push `7e48da6..343145d`**)
-- [ ] **Fase 6** — Visualizzatore 32 bit interattivo (click per bit, gruppi ottetti,
-      stile cidr.xyz) nella vista single + copy didattico (hint "?" sui campi chiave).
-      Design nel §4. ← **Siamo qui**
-- [ ] **Fase 7** — Chiusura: audit i18n (tutte le stringhe visibili in it+en), audit test
-      per ogni modulo, a11y axe, build, verifica deploy Pages. (Molto già coperto dalle
-      fasi precedenti: sarà soprattutto verifica + rifinitura.)
+- [x] **Fase 6** — Visualizzatore 32 bit interattivo + copy didattico (hint "?" sui campi)
+      (**COMPLETE: 284 test / 15 file, axe 0, commit `0348083..a1e9ad5`**)
+- [ ] **Fase 7** — Chiusura: audit i18n (tutte le stringhe visibili in it+en), verifica
+      `export.noCsvView` sulle viste non-calc, audit test per ogni modulo, a11y axe,
+      build, verifica deploy Pages. (Molto già coperto: sarà soprattutto verifica.)
+      ← **Siamo qui**
 
 ### Criteri di qualità
 - `tsc --noEmit` 0 errori, `npm.cmd test` tutti verdi, axe 0 violazioni, build ok,
@@ -389,7 +415,7 @@ fatte per via delle fasi precedenti, quindi Fase 7 sarà soprattutto audit+verif
 
 ```powershell
 npm.cmd run dev            # sviluppo
-npm.cmd test               # vitest (281 test / 15 file)
+npm.cmd test               # vitest (284 test / 15 file)
 npm.cmd test -- --coverage # + coverage src/calc (98.5% lines)
 npm.cmd run build          # tsc --noEmit && vite build
 .\node_modules\.bin\tsc.cmd --noEmit   # typecheck (npx è BLOCCATO in questa shell)
@@ -405,16 +431,16 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ## 7. GIT — stato aggiornato
 
-- Repo locale `main` **sincronizzato**: ultimo commit **`343145d test: scan the reference and
-  planning views with axe`** (push verde `7e48da6..343145d`); prima `7e48da6` (handoff Fase 4),
-  `f6cd764` (Fase 4), `da66ae9` (Fase 2/3). Deploy Pages aggiornato.
-- **Working tree PULITA**.
-- Fase 5 committata in **13 commit one-file-per-commit** (persist topology, projects storage,
-  views/types, 4 viste, layout.css, components.css, i18n it+en insieme, main.ts, ui.test, a11y.test).
-- Convenzione: **UN FILE = UN COMMIT**, messaggio custom, `git add <file>` mirato,
-  mai `git add -A`; in questa fase i18n it+en sono stati committati **insieme** (un solo
-  commit) per tenere la parità sempre verde — va bene così.
-- **Prossimo passo git**: lavorare Fase 6 e committare allo stesso modo, poi push.
+- Repo locale `main`: Fase 6 committata in **6 commit one-file-per-commit**
+  (`0348083` bitViewer → `95539f0` singleSubnet → `0bd5c72` subnetView → `2e807fc` i18n
+  it+en insieme → `4aa7e2d` components.css → `a1e9ad5` ui.test), poi questo handoff.
+  Storico: `74f8969` (handoff Fase 5), `343145d` (Fase 5 axe), `7e48da6..343145d` (Fase 5),
+  `f6cd764` (Fase 4), `da66ae9` (Fase 2/3).
+- **Working tree PULITA** (verificata dopo i commit).
+- Convenzione invariata: **UN FILE = UN COMMIT**, messaggio custom, `git add <file>` mirato,
+  mai `git add -A`; i18n it+en committati **insieme** per tenere la parità verde.
+- **Prossimo passo git**: verificare `git status`/`git log`, lavorare Fase 7 (audit) e
+  committare allo stesso modo, poi push.
 
 ---
 
@@ -422,10 +448,10 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ```
 Apri il progetto Eli6Subnets. Leggi HANDOFF-continue.md per intero: contiene lo storico
-della chat, le decisioni prese, cosa è stato fatto (Fase 1 ✅, Fase 2/3 ✅, Fase 4 ✅ e
-Fase 5 ✅ complete, 281 test verdi, tutto pushato) e cosa manca. Verifica lo stato con
-git status, tsc --noEmit e npm.cmd test, poi prosegui dalla Fase 6 (visualizzatore 32 bit
-nella vista single + copy didattico: il design è nel §4), rispettando le convenzioni
-(i18n it/en, nessuna firma AI, un file = un commit, dark-first con accento teal + blu
-secondario). Non committare/pushare senza chiedermelo.
+della chat, le decisioni prese, cosa è stato fatto (Fase 1 ✅, Fase 2/3 ✅, Fase 4 ✅,
+Fase 5 ✅ e Fase 6 ✅ complete, 284 test verdi, tutto pushato) e cosa manca. Verifica lo stato con
+git status, tsc --noEmit e npm.cmd test, poi prosegui dalla Fase 7 (chiusura: audit i18n,
+verifica export.noCsvView sulle viste non-calc, audit test, deploy Pages — il checklist è
+nel §4), rispettando le convenzioni (i18n it/en, nessuna firma AI, un file = un commit,
+dark-first con accento teal + blu secondario). Non committare/pushare senza chiedermelo.
 ```
