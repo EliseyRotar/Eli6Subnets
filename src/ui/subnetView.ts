@@ -11,9 +11,16 @@ import type { SubnetInfo } from '../calc/subnet'
 import { escapeHtml, html } from './dom'
 import { IconError, IconSuccess, IconWarning } from './icons'
 
-function row(labelKey: string, value: string, primary = false): string {
+function row(labelKey: string, value: string, primary = false, hintKey?: string): string {
+  const hint = hintKey
+    ? `<span class="field-hint">
+         <button type="button" class="field-hint__btn"
+                 aria-label="${escapeHtml(t(hintKey))}"><span aria-hidden="true">?</span></button>
+         <span class="field-hint__bubble" aria-hidden="true">${escapeHtml(t(hintKey))}</span>
+       </span>`
+    : ''
   return `<tr${primary ? ' class="is-primary"' : ''}>
-      <th scope="row">${escapeHtml(t(labelKey))}</th>
+      <th scope="row">${escapeHtml(t(labelKey))}${hint}</th>
       <td class="mono">${escapeHtml(value)}</td>
     </tr>`
 }
@@ -23,14 +30,14 @@ export function subnetFields(info: SubnetInfo): HTMLElement {
   return html(`
     <table class="result-table">
       <tbody>
-        ${row('label.networkAddress', `${info.networkAddress}/${info.prefix}`, true)}
-        ${row('label.broadcastAddress', info.broadcastAddress)}
-        ${row('label.subnetMask', info.subnetMask)}
-        ${row('label.wildcardMask', info.wildcardMask)}
-        ${row('label.firstHost', info.firstHost)}
+        ${row('label.networkAddress', `${info.networkAddress}/${info.prefix}`, true, 'hint.network')}
+        ${row('label.broadcastAddress', info.broadcastAddress, false, 'hint.broadcast')}
+        ${row('label.subnetMask', info.subnetMask, false, 'hint.mask')}
+        ${row('label.wildcardMask', info.wildcardMask, false, 'hint.wildcard')}
+        ${row('label.firstHost', info.firstHost, false, 'hint.hostRange')}
         ${row('label.lastHost', info.lastHost)}
-        ${row('label.totalAddresses', formatNumber(info.totalAddresses))}
-        ${row('label.usableHosts', formatNumber(info.usableHosts))}
+        ${row('label.totalAddresses', formatNumber(info.totalAddresses), false, 'hint.total')}
+        ${row('label.usableHosts', formatNumber(info.usableHosts), false, 'hint.usable')}
       </tbody>
     </table>`)
 }
