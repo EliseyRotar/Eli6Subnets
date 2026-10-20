@@ -40,6 +40,7 @@ export const CALCULATOR_IDS: CalculatorId[] = [
  * (topology, classes, guide and projects arrive with later phases).
  */
 export type ViewId =
+  | 'home'
   | CalculatorId
   | 'topology'
   | 'classes'
@@ -47,6 +48,7 @@ export type ViewId =
   | 'projects'
 
 export const VIEW_IDS: ViewId[] = [
+  'home',
   'single', 'vlsm', 'split', 'supernet',
   'range', 'overlap', 'ipv6', 'cloud',
   'topology', 'classes', 'guide', 'projects',
@@ -113,7 +115,7 @@ export interface AppState {
 export function defaultState(): AppState {
   return {
     version:    SCHEMA_VERSION,
-    activeView: 'single',
+    activeView: 'home',
     lang:       'it',
     theme:      'dark',
     tools: {
