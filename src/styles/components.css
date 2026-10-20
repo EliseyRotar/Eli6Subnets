@@ -223,6 +223,183 @@
   border-color: transparent;
 }
 
+/* ── Didactic field hints (?) ───────────────────────────────────── */
+
+.field-hint {
+  position: relative;
+  display: inline-flex;
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+.field-hint__btn {
+  width: 1.1rem;
+  height: 1.1rem;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+
+.field-hint__btn:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.field-hint__bubble {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: -0.5rem;
+  z-index: 20;
+  width: max-content;
+  max-width: 16rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-2);
+  color: var(--color-text);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: 1.5;
+  text-transform: none;
+  letter-spacing: normal;
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.35));
+  white-space: normal;
+}
+
+.field-hint:hover .field-hint__bubble,
+.field-hint__btn:focus-visible + .field-hint__bubble {
+  display: block;
+}
+
+/* ── 32-bit address viewer ──────────────────────────────────────── */
+
+.bit-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.bit-viewer__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.bit-viewer__head .card__title {
+  margin: 0;
+}
+
+.bit-legend {
+  display: flex;
+  gap: var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.bit-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.bit-swatch {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.bit-swatch--network {
+  background: var(--color-accent);
+}
+
+.bit-swatch--host {
+  background: var(--color-border-strong);
+}
+
+.bit-octet-row {
+  display: flex;
+  gap: var(--space-3);
+  min-width: max-content;
+  padding-bottom: var(--space-1);
+}
+
+.bit-octet {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.bit-octet__dec {
+  padding: 1px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.bit-octet__dec:hover {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
+.bit-octet__bits {
+  display: flex;
+  gap: 2px;
+}
+
+.bit {
+  width: 1.7rem;
+  height: 1.7rem;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-2);
+  color: var(--color-text-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  cursor: pointer;
+}
+
+.bit:hover {
+  border-color: var(--color-accent);
+}
+
+.bit--network {
+  background: var(--color-accent-subtle);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.bit.is-boundary {
+  margin-left: var(--space-2);
+  box-shadow: -3px 0 0 var(--color-secondary);
+}
+
+.bit-viewer__info {
+  margin: 0;
+  min-height: 1.5em;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
 /* ── Alert / warning / info blocks ──────────────────────────────── */
 
 .alert {
