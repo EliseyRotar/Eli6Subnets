@@ -79,9 +79,14 @@
   font-size: var(--text-base);
   font-weight: 500;
   transition: background var(--transition-fast), color var(--transition-fast),
-    border-color var(--transition-fast);
+    border-color var(--transition-fast), transform var(--transition-fast);
   white-space: nowrap;
   cursor: pointer;
+}
+
+/* Press feedback: a 1% sink on pointer-down, no layout impact */
+.btn:active:not(:disabled) {
+  transform: scale(0.99);
 }
 
 /* Primary: filled accent */
@@ -162,6 +167,7 @@
   text-align: left;
   padding: var(--space-2) var(--space-3);
   border-bottom: 1px solid var(--color-border);
+  transition: background var(--transition-fast);
 }
 
 .result-table thead th {
