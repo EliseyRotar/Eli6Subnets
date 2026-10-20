@@ -27,27 +27,49 @@ function type(selector: string, value: string): void {
 }
 
 describe('app shell', () => {
-  it('mounts sidebar, topbar, twelve views and footer', () => {
+  it('mounts sidebar, topbar, thirteen views and footer', () => {
     expect(document.querySelector('.sidebar')).not.toBeNull()
     expect(document.querySelector('.topbar')).not.toBeNull()
-    expect(document.querySelectorAll('.sidebar__link')).toHaveLength(12)
-    for (const id of ['single', 'vlsm', 'split', 'supernet', 'range', 'overlap', 'ipv6', 'cloud', 'topology', 'classes', 'guide', 'projects']) {
+    expect(document.querySelectorAll('.sidebar__link')).toHaveLength(13)
+    for (const id of ['home', 'single', 'vlsm', 'split', 'supernet', 'range', 'overlap', 'ipv6', 'cloud', 'topology', 'classes', 'guide', 'projects']) {
       expect(document.querySelector(`#view-${id}`)).not.toBeNull()
     }
     expect(document.querySelector('.footer')).not.toBeNull()
     expect(document.querySelector('.toast')).not.toBeNull()
   })
 
-  it('shows the single-subnet view first', () => {
-    expect(q('#view-single').classList.contains('is-active')).toBe(true)
-    expect(q('#nav-single').getAttribute('aria-current')).toBe('page')
-    expect(q('.topbar__view').textContent).toBe('Sottorete singola')
-    expect(location.hash).toBe('#/single')
+  it('shows the home view first', () => {
+    expect(q('#view-home').classList.contains('is-active')).toBe(true)
+    expect(q('#nav-home').getAttribute('aria-current')).toBe('page')
+    expect(q('.topbar__view').textContent).toBe('Home')
+    expect(location.hash).toBe('#/home')
   })
 
   it('renders Italian labels', () => {
     expect(q('#nav-single').textContent?.trim()).toBe('Sottorete singola')
     expect(document.title).toContain('Calcolatore di sottoreti IPv4')
+  })
+})
+
+describe('home view', () => {
+  it('renders the hero, rotating tip and bento grid of cards', () => {
+    const view = q('#view-home')
+    expect(view.querySelector('.home-hero__title')?.textContent).toBe('Eli6Subnets')
+    expect(view.querySelector('.home-hero__sub')?.textContent).toContain('VLSM')
+    expect(view.querySelector('.home-tip__text')?.textContent).toContain('RFC')
+    const cards = view.querySelectorAll('.home-card')
+    expect(cards).toHaveLength(12)
+    expect(view.querySelector('.home-card--hero')).not.toBeNull()
+    expect(view.querySelector('.home-card--hero')?.getAttribute('data-nav')).toBe('single')
+  })
+
+  it('navigates to a tool when a card is clicked', () => {
+    q<HTMLAnchorElement>('#view-home .home-card[data-nav="vlsm"]').click()
+    expect(location.hash).toBe('#/vlsm')
+    expect(q('#view-vlsm').classList.contains('is-active')).toBe(true)
+    // Return home for subsequent tests.
+    q<HTMLAnchorElement>('#nav-home').click()
+    expect(q('#view-home').classList.contains('is-active')).toBe(true)
   })
 })
 
@@ -422,7 +444,11 @@ describe('topology view', () => {
     expect(node).not.toBeNull()
     const before = node?.getAttribute('transform')
 
+    // Regression: pointerdown must NOT replace the node element, otherwise
+    // setPointerCapture fails in real browsers and dragging silently breaks.
     node?.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, clientX: 100, clientY: 100 }))
+    expect(view.querySelector('.topo-node')).toBe(node)
+
     svg.dispatchEvent(new MouseEvent('pointermove', { bubbles: true, clientX: 150, clientY: 140 }))
     svg.dispatchEvent(new MouseEvent('pointerup', { bubbles: true }))
 
