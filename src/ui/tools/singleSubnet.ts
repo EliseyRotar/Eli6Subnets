@@ -10,6 +10,7 @@ import { patchTool } from '../../state/store'
 import { interfaceBlock, interfaceHint, mountCisco, snippet, type CiscoHandle } from '../cisco'
 import { clear, qs, setFieldError } from '../dom'
 import { singleDashboard } from '../dashboard'
+import { bitViewer } from '../bitViewer'
 import { emptyState, subnetSection } from '../subnetView'
 import type { ToolPanel } from './types'
 
@@ -68,6 +69,7 @@ export function mountSingleSubnet(container: HTMLElement): ToolPanel {
     clear(body)
     if (lastInfo) {
       body.appendChild(singleDashboard(lastInfo))
+      body.appendChild(bitViewer(lastInfo))
       body.appendChild(subnetSection(null, lastInfo))
     } else {
       body.appendChild(emptyState('empty.single'))
