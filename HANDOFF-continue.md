@@ -419,6 +419,16 @@ CSS: blocco home in `components.css` (`.home-view/.home-hero*/.home-tip*/.home-g
 axe 0 violazioni; coverage calc 98.53% lines / 100% funcs; build ok.
 Commit `22a6886..0e633f6` (10 commit one-file, i18n it+en insieme), push `b5552e7..0e633f6`.
 
+**Design polish** (stessa fase, commit `d0cd944..8de70ee`):
+- `base.css` — guard globale `@media (prefers-reduced-motion: reduce)` che disabilita
+  **tutte** le animazioni/transizioni in un posto solo (invece che per componente).
+- `layout.css` — `@keyframes view-in` (solo opacity, **no transform**: un transform sul
+  `.tool-panel` creerebbe un containing block e romperebbe la sticky input column);
+  applicato a `.tool-panel.is-active` → fade-in a ogni cambio vista.
+- `components.css` — `transition: background` sulle celle `th/td` (hover riga tabella
+  morbido) + `.btn:active:not(:disabled) { transform: scale(0.99) }` (feedback pressione).
+- Verificato: tsc 0, 287/287, axe 0 (l'animazione non crea violazioni), build ok.
+
 ---
 
 ## 4. Fase 7 ✅ — chiusura: audit + verifica (COMPLETA) · Fase 8 ✅ — home launcher (COMPLETA)
@@ -502,8 +512,9 @@ npm.cmd run build          # tsc --noEmit && vite build
 - Repo locale `main` aggiornato con la **Fase 8**: `22a6886` fix drag topology →
   `7c5bcc6` i18n home → `81f069e` persist home default → `19c3f6a` IconHome →
   `9e23b0d` home view → `cb3d649` sidebar home link → `b23f98d` mount home →
-  `3fd7e24` home CSS → `2f62b0a` brand anchor → `0e633f6` test home/drag, poi push
-  `b5552e7..0e633f6` (deploy automatico Pages).
+  `3fd7e24` home CSS → `2f62b0a` brand anchor → `0e633f6` test home/drag →
+  `d0cd944` reduced-motion globale → `f7c2206` view-in keyframe → `8de70ee`
+  hover/press micro-interactions → handoff, poi push (deploy automatico Pages).
   Storico recente: `b5552e7` (handoff Fase 7), `3bba528` (handoff Fase 6),
   `0348083..a1e9ad5` (Fase 6), `343145d` (Fase 5 axe), `f6cd764` (Fase 4), `da66ae9` (Fase 2/3).
 - **Working tree PULITA** dopo il commit dell'handoff.
