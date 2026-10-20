@@ -70,6 +70,12 @@ export const IconPlus = svg('<path d="M12 5v14"/><path d="M5 12h14"/>')
 /** Hamburger — open the sidebar drawer on narrow viewports. */
 export const IconMenu = svg('<path d="M4 6h16M4 12h16M4 18h16"/>')
 
+export const IconHome = svg(
+  '<path d="M3 10.5 12 3l9 7.5"/>' +
+  '<path d="M5 9.5V21h14V9.5"/>' +
+  '<path d="M9 21v-7h6v7"/>',
+)
+
 /** Single network block. */
 export const IconSingle = svg(
   '<rect x="3" y="6" width="18" height="12" rx="2"/>' +
