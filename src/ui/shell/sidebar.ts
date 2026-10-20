@@ -13,6 +13,7 @@ import { scheduleRefresh } from '../../charts'
 import { getState, patchState, subscribe } from '../../state/store'
 import type { ViewId } from '../../state/persist'
 import { qs } from '../dom'
+import { IconHome } from '../icons'
 import { NAV_SECTIONS } from './nav'
 
 export interface SidebarHandle {
@@ -39,9 +40,26 @@ export function mountSidebar(
   registered: ViewId[],
 ): SidebarHandle {
   /** View id → i18n label key, derived from the nav model. */
-  const labelKeys: Record<string, string> = Object.fromEntries(
-    NAV_SECTIONS.flatMap(section => section.items.map(item => [item.id, item.labelKey])),
-  )
+  const labelKeys: Record<string, string> = {
+    home: 'nav.home',
+    ...Object.fromEntries(
+      NAV_SECTIONS.flatMap(section => section.items.map(item => [item.id, item.labelKey])),
+    ),
+  }
+
+  const homeLink = registered.includes('home')
+    ? `
+      <div>
+        <ul class="sidebar__list">
+          <li>
+            <a class="sidebar__link" id="nav-home" href="#/home" data-view="home">
+              ${IconHome}
+              <span data-i18n-key="nav.home"></span>
+            </a>
+          </li>
+        </ul>
+      </div>`
+    : ''
 
   const sections = NAV_SECTIONS.map(section => {
     const items = section.items.filter(item => registered.includes(item.id))
@@ -66,11 +84,11 @@ export function mountSidebar(
     'afterbegin',
     `
     <aside class="sidebar">
-      <div class="sidebar__brand">
+      <a class="sidebar__brand" href="#/home" aria-label="Eli6Subnets">
         <span class="sidebar__logo" aria-hidden="true">/24</span>
         <h1 class="sidebar__title">Eli6<span>Subnets</span></h1>
-      </div>
-      <nav class="sidebar__nav" data-i18n-aria="nav.main">${sections}</nav>
+      </a>
+      <nav class="sidebar__nav" data-i18n-aria="nav.main">${homeLink}${sections}</nav>
     </aside>
     <div class="sidebar-overlay" data-sidebar-overlay aria-hidden="true"></div>`,
   )
