@@ -341,6 +341,27 @@ export function mountTopology(container: HTMLElement): ViewHandle {
 
   // ── Canvas interaction ─────────────────────────────────────────────
 
+  /**
+   * Toggle the is-selected class on canvas elements without rebuilding the
+   * DOM. Replacing innerHTML during pointerdown destroys the element under
+   * the cursor, which breaks setPointerCapture and makes dragging silently
+   * fail in real browsers (jsdom is lenient, so tests don't catch it).
+   */
+  const updateSelectionClasses = (): void => {
+    for (const el of nodesHost.querySelectorAll('.topo-node')) {
+      el.classList.toggle(
+        'is-selected',
+        selection?.type === 'node' && el.getAttribute('data-id') === selection.id,
+      )
+    }
+    for (const el of linksHost.querySelectorAll('.topo-link')) {
+      el.classList.toggle(
+        'is-selected',
+        selection?.type === 'link' && el.getAttribute('data-id') === selection.id,
+      )
+    }
+  }
+
   const clientToCanvas = (event: { clientX: number; clientY: number }): { x: number; y: number } => {
     const rect = svg.getBoundingClientRect()
     if (rect.width > 0 && rect.height > 0) {
@@ -405,9 +426,11 @@ export function mountTopology(container: HTMLElement): ViewHandle {
     if (nodeEl) {
       const node = findNode(nodeEl.dataset['id'] ?? '')
       if (!node) return
-      const wasSelected = selection?.type === 'node' && selection.id === node.id
       selection = { type: 'node', id: node.id }
-      if (!wasSelected) render()
+      // Light-weight selection update: never rebuild the canvas here or
+      // pointer capture (and therefore drag) breaks in real browsers.
+      updateSelectionClasses()
+      renderInspector()
       nodeEl.focus?.()
       startDrag(node, event)
       event.preventDefault()
@@ -416,14 +439,16 @@ export function mountTopology(container: HTMLElement): ViewHandle {
 
     if (linkEl) {
       selection = { type: 'link', id: linkEl.dataset['id'] ?? '' }
-      render()
+      updateSelectionClasses()
+      renderInspector()
       event.preventDefault()
       return
     }
 
     if (selection !== null) {
       selection = null
-      render()
+      updateSelectionClasses()
+      renderInspector()
     }
   })
 
@@ -469,8 +494,9 @@ export function mountTopology(container: HTMLElement): ViewHandle {
     const id = hit.dataset['id'] ?? ''
     if (nodeEl) selection = { type: 'node', id }
     else selection = { type: 'link', id }
-    render()
-    // The re-render replaced the element: restore keyboard focus on it.
+    updateSelectionClasses()
+    renderInspector()
+    // Re-query after the class update: focus the (same) element.
     const selector = nodeEl ? '.topo-node' : '.topo-link'
     const next = svg.querySelector(`${selector}[data-id="${CSS.escape(id)}"]`) as SVGElement | null
     next?.focus?.()
