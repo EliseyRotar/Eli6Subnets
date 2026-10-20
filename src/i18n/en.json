@@ -107,6 +107,21 @@
   "note.rfc3021_31": "/31: 2 usable addresses, no reserved network or broadcast address (RFC 3021).",
   "note.rfc3021_32": "/32: host route, a single usable address.",
 
+  "hint.network": "First address of the block: all host bits are 0.",
+  "hint.broadcast": "Last address: all host bits are 1. It cannot be assigned to a host.",
+  "hint.mask": "Subnet mask: 1 bits mark the network part (the prefix).",
+  "hint.wildcard": "Inverse mask (host bits): used in Cisco ACLs.",
+  "hint.hostRange": "Usable bounds: first and last address assignable to a host.",
+  "hint.total": "Block size: 2^(32 − prefix).",
+  "hint.usable": "Usable hosts: total addresses − 2 (network and broadcast).",
+
+  "bits.title": "The 32 bits of the network address",
+  "bits.hint": "Click a bit or an octet to see the details.",
+  "bits.network": "network bit",
+  "bits.host": "host bit",
+  "bits.bitInfo": "Bit {0} (octet {1}) · value 2{2} = {3} — {4}",
+  "bits.octetInfo": "Octet {0} = {1} ({2} in binary)",
+
   "empty.single": "Enter a CIDR network on the left, then press Calculate.",
   "empty.vlsm": "Enter the base network and the requests, then press Allocate.",
   "empty.split": "Enter the base network and the number of subnets, then press Split.",

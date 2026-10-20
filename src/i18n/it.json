@@ -107,6 +107,21 @@
   "note.rfc3021_31": "/31: 2 indirizzi utilizzabili, nessun indirizzo riservato a rete o broadcast (RFC 3021).",
   "note.rfc3021_32": "/32: route host, un solo indirizzo utilizzabile.",
 
+  "hint.network": "Primo indirizzo della rete: tutti i bit host sono a 0.",
+  "hint.broadcast": "Ultimo indirizzo: tutti i bit host sono a 1. Non è assegnabile a un host.",
+  "hint.mask": "Maschera di sottorete: i bit a 1 individuano la parte di rete (prefisso).",
+  "hint.wildcard": "Maschera inversa (bit host): si usa nelle ACL Cisco.",
+  "hint.hostRange": "Estremi utilizzabili: primo e ultimo indirizzo assegnabile a un host.",
+  "hint.total": "Dimensione del blocco: 2^(32 − prefisso).",
+  "hint.usable": "Host utilizzabili: indirizzi totali − 2 (rete e broadcast).",
+
+  "bits.title": "I 32 bit dell'indirizzo di rete",
+  "bits.hint": "Clicca un bit o un ottetto per vedere il dettaglio.",
+  "bits.network": "bit di rete",
+  "bits.host": "bit host",
+  "bits.bitInfo": "Bit {0} (ottetto {1}) · valore 2{2} = {3} — {4}",
+  "bits.octetInfo": "Ottetto {0} = {1} ({2} in binario)",
+
   "empty.single": "Inserisci una rete CIDR a sinistra, poi premi Calcola.",
   "empty.vlsm": "Inserisci la rete di base e le richieste, poi premi Alloca.",
   "empty.split": "Inserisci la rete di base e il numero di sottoreti, poi premi Dividi.",
