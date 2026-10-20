@@ -474,8 +474,23 @@ describe('dashboard', () => {
   it('shows coverage KPIs and both charts for supernetting', () => {
     const view = q('#view-supernet')
     expect(view.querySelectorAll('.kpi-card').length).toBeGreaterThanOrEqual(4)
-    expect(view.querySelectorAll('.chart-card').length).toBe(2)
+    expect(view.querySelectorAll('.chart-card')).toHaveLength(2)
     expect(view.querySelector('.result-table')).not.toBeNull()
+  })
+})
+
+describe('footer export guard', () => {
+  it('explains that a reference view has no CSV export', () => {
+    q<HTMLAnchorElement>('#nav-guide').click()
+    expect(q('#view-guide').classList.contains('is-active')).toBe(true)
+
+    q<HTMLButtonElement>('#export-csv').click()
+    const alert = q('.footer__alert')
+    expect(alert.hidden).toBe(false)
+    expect(q('.js-import-error').textContent).toContain("non supporta l'esportazione")
+
+    q<HTMLButtonElement>('.js-dismiss-error').click()
+    expect(alert.hidden).toBe(true)
   })
 })
 
