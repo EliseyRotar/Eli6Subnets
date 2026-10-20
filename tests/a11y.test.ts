@@ -86,13 +86,15 @@ describe('accessibility', () => {
     expect(report(violations)).toBe('')
   })
 
+  // Four serial axe scans: the default 5s budget is not enough when the
+  // coverage instrumentation is on, so give this test explicit headroom.
   it('stays clean with the reference and planning views open', async () => {
     for (const id of ['classes', 'topology', 'guide', 'projects']) {
       document.querySelector<HTMLAnchorElement>(`#nav-${id}`)?.click()
       const violations = await runAxe()
       expect(report(violations), `view ${id}`).toBe('')
     }
-  })
+  }, 20_000)
 
   it('stays clean in the dark theme', async () => {
     document.documentElement.dataset['theme'] = 'dark'
