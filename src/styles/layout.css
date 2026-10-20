@@ -193,6 +193,19 @@
   grid-template-columns: var(--input-col-width) minmax(0, 1fr);
   gap: var(--space-6);
   align-items: start;
+  animation: view-in var(--transition-base) ease both;
+}
+
+/* Subtle entrance on every view switch. Opacity only: a transform on the
+   panel would create a containing block and break the sticky input column.
+   Disabled globally under prefers-reduced-motion (base.css). */
+@keyframes view-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Full-width views without the input/results split (guide, classes, …) */
