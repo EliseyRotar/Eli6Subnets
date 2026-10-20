@@ -5,7 +5,7 @@
 > dove siamo arrivati, seguendo le convenzioni elencate."*
 >
 > File creato: 02/10/2026, sessione opencode (modello: opencode/mimo-v2.6-flash-free).
-> Ultimo aggiornamento: 16/10/2026 — **Fase 5 completata e pushata** (vedi §3/§7).
+> Ultimo aggiornamento: 20/10/2026 — **Fase 8 (home launcher + fix drag topology) pushata** (vedi §3/§7).
 
 ---
 
@@ -112,7 +112,7 @@ Pages verificato (`39383018804` success). **Progetto completo: 7/7 fasi.**
 
 ---
 
-## 3. Cosa è stato FATTO (Fase 1 ✅ + Fase 2/3 ✅ + Fase 4 ✅ + Fase 5 ✅ + Fase 6 ✅ + Fase 7 ✅)
+## 3. Cosa è stato FATTO (Fase 1 ✅ + Fase 2/3 ✅ + Fase 4 ✅ + Fase 5 ✅ + Fase 6 ✅ + Fase 7 ✅ + Fase 8 ✅)
 
 ### Fase 7 ✅ — chiusura: audit + verifica (commit `bc453b2`, `bf2b9d1`)
 
@@ -382,16 +382,54 @@ Verifiche superate alla fine della Fase 1:
 - Sidebar titolo h1 è l'**unico h1** della pagina (topbar usa h2).
 - `location.hash` va preservato nei vari `history.replaceState` (pathname + hash).
 
+### Fase 8 ✅ — home launcher + fix drag topology (20/10/2026)
+
+Nuova fase richiesta dall'utente dopo la chiusura delle 7 fasi originali.
+Domande poste all'utente e risposte: home = view di default ✓; layout **bento grid** ✓;
+home = hero + card + tips rotanti ✓; polish design = spacing + colori + animazioni ✓.
+
+**Fix bug drag topology** (`src/ui/views/topology.ts`): il `pointerdown` chiamava `render()`
+→ `renderCanvas()` → `nodesHost.innerHTML = …`, distruggendo l'elemento sotto il cursore
+prima di `svg.setPointerCapture()` → il drag falliva silenziosamente nel browser reale
+(jsdom era indulgente). Soluzione: `updateSelectionClasses()` (toggle `is-selected` senza
+toccare innerHTML) + `renderInspector()`; stessa correzione su link-select, canvas-clear e
+handler tastiera Enter/Space. Test di regressione: dopo pointerdown il nodo è lo **stesso**
+DOM node (`expect(view.querySelector('.topo-node')).toBe(node)`).
+
+**Home view** (`src/ui/views/home.ts`, NUOVO): `mountHome(container): ViewHandle` —
+hero (kicker/title/subtitle + tip `role="status" aria-live="polite"`), 12 card bento
+(1 hero `single` + 11 standard), tips rotanti (`home.tip.1`–`8`, interval 9s), glow
+cursor-tracking (solo `pointer: fine` e non `prefers-reduced-motion`), entrance stagger
+`calc(var(--i)*50ms)`. Card = `<a href="#/view" data-nav>` con click handler che
+`preventDefault` + imposta `location.hash` + **dispatch `HashChangeEvent` sincrono**
+(jsdom non naviga sugli `<a>`; il listener hashchange è idempotente per guardia
+`view === getState().activeView`). `refresh()` ricostruisce la grid e ri-wira le card.
+
+**Integrazione**: `persist.ts` (`ViewId`+`VIEW_IDS` iniziano con `'home'`, default
+`activeView: 'home'`), `main.ts` (`mountHome(main)` per prima, sidebar
+`['home', ...CALCULATOR_IDS, 'classes','topology','guide','projects']`),
+`icons.ts` (`IconHome`), `sidebar.ts` (`homeLink` + brand div → `<a href="#/home">`),
+`layout.css` (brand anchor: `text-decoration: none; color: inherit`).
+i18n: `nav.home` + 30 chiavi `home.*` (it+en insieme).
+CSS: blocco home in `components.css` (`.home-view/.home-hero*/.home-tip*/.home-grid/
+.home-card*/.home-card__icon/…` + `@keyframes home-card-in` + reduced-motion + 540px).
+
+**Test**: 287/287 (15 file) — shell 13 link + home-first, 2 nuovi test home
+(rendering hero/grid + navigazione click card), regressione drag topology.
+axe 0 violazioni; coverage calc 98.53% lines / 100% funcs; build ok.
+Commit `22a6886..0e633f6` (10 commit one-file, i18n it+en insieme), push `b5552e7..0e633f6`.
+
 ---
 
-## 4. Fase 7 ✅ — chiusura: audit + verifica (COMPLETA)
+## 4. Fase 7 ✅ — chiusura: audit + verifica (COMPLETA) · Fase 8 ✅ — home launcher (COMPLETA)
 
-Tutte le 7 fasi sono finite. Verifiche finali:
+Le 7 fasi originali sono finite; la Fase 8 (home launcher + fix drag) le ha seguite.
+Verifiche finali della Fase 7:
 
 - [x] **Audit i18n** — grep testi hardcodati in `src/ui/**`: pulito; parità it/en col test.
 - [x] **`export.noCsvView`** — `activePanel()` null sulle viste non-calc → messaggio su
       export/import; coperto dal test `footer export guard`.
-- [x] **Audit test** — `--coverage`: 285/285, `src/calc` 98.53% lines / 100% funcs.
+- [x] **Audit test** — `--coverage`: 285/285 (ora 287 con Fase 8), `src/calc` 98.53% lines / 100% funcs.
 - [x] **axe 0 violazioni** (5 scenari, incluso dark theme) + `tsc --noEmit` + build ok.
 - [x] **Deploy Pages** — workflow `Deploy to GitHub Pages` success (ultimo run verificato
       con `gh run list`).
@@ -400,14 +438,17 @@ Tutte le 7 fasi sono finite. Verifiche finali:
 - i18n: ogni chiave in **entrambi** i dizionari (`tests/i18n.test.ts` parità);
   `applyTranslations` schiaccia i figli → `data-i18n-key` mai su elementi con figli dinamici;
   righe ricostruite a runtime → `applyTranslations(list)` o `t()` al build (vedi projects.ts,
-  bitViewer.ts).
+  bitViewer.ts, home.ts `refresh()`).
 - Viste non-calc: montate come `ViewHandle`, NON in `panels`; `mountSidebar` con spread.
 - Topology: modello = `getState().topology` (muta in place + `patchState` per persistere);
-  overlay `.topo-empty` sempre con `hidden` toggle; `clientToCanvas` con fallback jsdom.
+  overlay `.topo-empty` sempre con `hidden` toggle; `clientToCanvas` con fallback jsdom;
+  **mai `render()` su pointerdown** (distrugge l'elemento catturato → drag rotto).
+- Home: card = `<a href>` nativo + click handler con `HashChangeEvent` sincrono per jsdom;
+  `refresh()` ricostruisce la grid e ri-wira.
 - CSS-only classi dai token (`--color-*`, `--space-*`, `--radius-*`); niente colori hardcodati.
 - Un file = un commit con messaggio custom, `git add <file>` mirato.
 - Verifiche obbligatorie: `.\node_modules\.bin\tsc.cmd --noEmit`,
-  `npm.cmd test` (285 test, 15 file), `npm.cmd run build`.
+  `npm.cmd test` (287 test, 15 file), `npm.cmd run build`.
 - ⚠ Suite jsdom può andare lenta in parallelo la prima volta su OneDrive (hookTimeout 10s):
   se 3 file falliscono con "Hook timed out", **rirun** `npm.cmd test` — di norma passa.
 
@@ -425,10 +466,13 @@ Tutte le 7 fasi sono finite. Verifiche finali:
       (**COMPLETE: 284 test / 15 file, axe 0, commit `0348083..a1e9ad5`**)
 - [x] **Fase 7** — Chiusura: audit i18n, `export.noCsvView` + test, coverage 98.5%,
       axe 0, build, deploy Pages verificato. (**COMPLETE: 285 test / 15 file,
-      commit `bc453b2` + `bf2b9d1`**) ← **PROGETTO COMPLETO (7/7 fasi)**
+      commit `bc453b2` + `bf2b9d1`**)
+- [x] **Fase 8** — Home launcher (bento grid + hero + tips rotanti, default view) +
+      fix drag topology. (**COMPLETE: 287 test / 15 file, axe 0,
+      commit `22a6886..0e633f6`, push `b5552e7..0e633f6`**)
 
 ### Criteri di qualità
-- `tsc --noEmit` 0 errori, `npm.cmd test` tutti verdi, axe 0 violazioni, build ok,
+- `tsc --noEmit` 0 errori, `npm.cmd test` tutti verdi (287), axe 0 violazioni, build ok,
   **0 riferimenti esterni** (no CDN: ECharts va bundlata, già in dependencies ✓).
 - Ogni vista: stato vuoto (`emptyState`), errori inline, KPI in alto-sinistra, max ~2 grafici/vista.
 - i18n: ogni stringa visibile in it **e** en.
@@ -439,7 +483,7 @@ Tutte le 7 fasi sono finite. Verifiche finali:
 
 ```powershell
 npm.cmd run dev            # sviluppo
-npm.cmd test               # vitest (285 test / 15 file)
+npm.cmd test               # vitest (287 test / 15 file)
 npm.cmd test -- --coverage # + coverage src/calc (98.5% lines)
 npm.cmd run build          # tsc --noEmit && vite build
 .\node_modules\.bin\tsc.cmd --noEmit   # typecheck (npx è BLOCCATO in questa shell)
@@ -455,16 +499,18 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ## 7. GIT — stato aggiornato
 
-- Repo locale `main` aggiornato con la **Fase 7**: `bc453b2` test guard CSV export →
-  `bf2b9d1` test timeout axe → questo handoff, poi push (deploy automatico Pages).
-  Storico recente: `3bba528` (handoff Fase 6), `0348083..a1e9ad5` (Fase 6, 6 commit
-  one-file), `74f8969` (handoff Fase 5), `343145d` (Fase 5 axe), `7e48da6..343145d` (Fase 5),
-  `f6cd764` (Fase 4), `da66ae9` (Fase 2/3).
+- Repo locale `main` aggiornato con la **Fase 8**: `22a6886` fix drag topology →
+  `7c5bcc6` i18n home → `81f069e` persist home default → `19c3f6a` IconHome →
+  `9e23b0d` home view → `cb3d649` sidebar home link → `b23f98d` mount home →
+  `3fd7e24` home CSS → `2f62b0a` brand anchor → `0e633f6` test home/drag, poi push
+  `b5552e7..0e633f6` (deploy automatico Pages).
+  Storico recente: `b5552e7` (handoff Fase 7), `3bba528` (handoff Fase 6),
+  `0348083..a1e9ad5` (Fase 6), `343145d` (Fase 5 axe), `f6cd764` (Fase 4), `da66ae9` (Fase 2/3).
 - **Working tree PULITA** dopo il commit dell'handoff.
 - Convenzione invariata: **UN FILE = UN COMMIT**, messaggio custom, `git add <file>` mirato,
   mai `git add -A`; i18n it+en committati **insieme** per tenere la parità verde.
-- **Prossimo passo git**: nessuna fase aperta — tutte e 7 complete e pushate. Eventuale
-  lavoro futuro = nuova fase, stesso schema (un file = un commit, poi push).
+- **Prossimo passo git**: Fase 8 completa e pushata. Eventuale lavoro futuro = nuova fase,
+  stesso schema (un file = un commit, poi push).
 
 ---
 
@@ -472,10 +518,10 @@ npm.cmd run build          # tsc --noEmit && vite build
 
 ```
 Apri il progetto Eli6Subnets. Leggi HANDOFF-continue.md per intero: contiene lo storico
-della chat, le decisioni prese e la verifica che TUTTE E 7 le fasi sono complete
-(285 test verdi, axe 0, coverage calc 98.5%, build ok, deploy Pages verificato, tutto
-pushato). Verifica lo stato con git status, tsc --noEmit e npm.cmd test. Se ti chiedo
-nuove funzionalità, trattale come una NUOVA fase seguendo le convenzioni nel §4 (i18n
+della chat, le decisioni prese e la verifica che TUTTE LE 8 fasi sono complete (287 test
+verdi, axe 0, coverage calc 98.5%, build ok, deploy Pages verificato, tutto pushato).
+Verifica lo stato con git status, tsc --noEmit e npm.cmd test. Se ti chiedo nuove
+funzionalità, trattale come una NUOVA fase seguendo le convenzioni nel §4 (i18n
 it/en con parità, nessuna firma AI, un file = un commit con messaggio custom, dark-first
 con accento teal + blu secondario, CSS dai token). Non committare/pushare senza chiedermelo.
 ```
