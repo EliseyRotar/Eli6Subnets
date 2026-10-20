@@ -82,6 +82,50 @@ describe('single subnet tool', () => {
   })
 })
 
+describe('bit viewer', () => {
+  it('renders 32 bits split by the prefix into four octet groups', () => {
+    type('#single-cidr', '192.168.1.0/26')
+    submit('#single-form')
+
+    const view = q('#view-single')
+    expect(view.querySelectorAll('.bit')).toHaveLength(32)
+    expect(view.querySelectorAll('.bit--network')).toHaveLength(26)
+    expect(view.querySelectorAll('.bit--host')).toHaveLength(6)
+    expect(view.querySelectorAll('.bit-octet')).toHaveLength(4)
+    expect(view.querySelectorAll('.field-hint__btn')).toHaveLength(7)
+
+    const bits = Array.from(view.querySelectorAll('.bit'))
+    expect(bits[26]?.classList.contains('is-boundary')).toBe(true)
+    expect(bits[25]?.classList.contains('is-boundary')).toBe(false)
+  })
+
+  it('explains a bit and an octet on click', () => {
+    const view = q('#view-single')
+    view.querySelector<HTMLButtonElement>('.bit[data-index="0"]')?.click()
+
+    const bitInfo = q('#view-single .bit-viewer__info').textContent ?? ''
+    expect(bitInfo).toContain('Bit 0')
+    expect(bitInfo).toContain('2.147.483.648')
+    expect(bitInfo).toContain('bit di rete')
+
+    view.querySelector<HTMLButtonElement>('.bit-octet__dec')?.click()
+
+    const octetInfo = q('#view-single .bit-viewer__info').textContent ?? ''
+    expect(octetInfo).toContain('192')
+    expect(octetInfo).toContain('11000000')
+  })
+
+  it('treats every bit as host for /0 and as network for /32', () => {
+    type('#single-cidr', '0.0.0.0/0')
+    submit('#single-form')
+    expect(q('#view-single').querySelectorAll('.bit--network')).toHaveLength(0)
+
+    type('#single-cidr', '192.168.1.1/32')
+    submit('#single-form')
+    expect(q('#view-single').querySelectorAll('.bit--network')).toHaveLength(32)
+  })
+})
+
 describe('sidebar navigation', () => {
   it('switches views on click and mirrors the hash', () => {
     q<HTMLAnchorElement>('#nav-vlsm').click()
